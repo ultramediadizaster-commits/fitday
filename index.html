@@ -1,0 +1,3878 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0A0B">
+<meta name="description" content="FitDay — оятқыш, дене және бет жаттығулары. Офлайн жұмыс істейді.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FitDay">
+<link rel="manifest" href="manifest.json">
+<title>FitDay — күнделікті жаттығу</title>
+<style>
+/* =========================================================================
+   0) ДИЗАЙН ТОКЕНДЕРІ — барлық түс осы жерден өзгертіледі
+   ========================================================================= */
+:root{
+  /* Түс жүйесі */
+  --bg:#0A0A0B;
+  --surface:#141416;
+  --elevated:#1C1C1F;
+  --border:rgba(255,255,255,0.08);
+  --border-strong:rgba(255,255,255,0.14);
+  --text:#FAFAFA;
+  --muted:#A1A1AA;
+  --dim:#52525B;
+  --accent:#D9F24E;
+  --accent-ink:#0A0A0B;
+  --danger:#FF5A4D;
+
+  /* Пішін */
+  --r-card:18px;
+  --r-btn:14px;
+  --r-sm:11px;
+
+  /* Қашықтық */
+  --pad:20px;
+  --gap:14px;
+  --card-pad:18px;
+
+  /* Қозғалыс — бәріне бірдей */
+  --ease:cubic-bezier(0.32,0.72,0,1);
+  --dur:160ms;
+  --tap:120ms;
+
+  /* Өлшем */
+  --btn-h:52px;
+  --icon-btn:48px;
+  --nav-h:74px;
+}
+
+/* =========================================================================
+   1) НЕГІЗ
+   ========================================================================= */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-size:15px;line-height:1.5;letter-spacing:-0.006em;
+  overflow-x:hidden;
+}
+button,input,select{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;padding:0}
+ol,ul{margin:0;padding:0}
+h1,h2,h3,p{margin:0}
+svg{display:block}
+
+/* Иконка: stroke негізді, 24x24, currentColor */
+.i{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;
+   stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.i-sm{width:18px;height:18px}
+.i-fill,.i-solid{fill:currentColor;stroke:none}
+
+/* =========================================================================
+   2) ТИПОГРАФИЯ — 4 өлшем ғана
+   ========================================================================= */
+.label{font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:0.1em;color:var(--dim);line-height:1.4}
+.sec{display:block;margin:22px 2px 12px}
+.title{font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:1.25}
+.muted{color:var(--muted)}
+.dim{color:var(--dim)}
+.tac{text-align:center}
+.num{font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:-0.03em}
+
+/* =========================================================================
+   3) ТҮЙМЕЛЕР
+   ========================================================================= */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  width:100%;min-height:var(--btn-h);padding:0 18px;
+  background:transparent;border:1px solid var(--border);border-radius:var(--r-btn);
+  color:var(--text);font-size:15px;font-weight:600;letter-spacing:-0.01em;
+  transition:transform var(--tap) var(--ease),background var(--dur) var(--ease),
+             border-color var(--dur) var(--ease),color var(--dur) var(--ease);
+}
+.btn:active{transform:scale(0.97)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{border-color:transparent;color:var(--muted)}
+.btn.danger{color:var(--danger);border-color:rgba(255,90,77,0.28)}
+.btn.sm{width:auto;min-height:40px;padding:0 15px;font-size:13px;border-radius:var(--r-sm)}
+.btn[disabled],.btn.off{opacity:0.4;cursor:not-allowed;pointer-events:none}
+.btn .i{width:20px;height:20px}
+.btn-row{display:flex;gap:10px}
+.btn-row .btn{flex:1;min-width:0;font-size:14px;gap:7px;padding:0 10px}
+
+.icon-btn{
+  width:var(--icon-btn);height:var(--icon-btn);flex:none;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  transition:transform var(--tap) var(--ease),background var(--dur) var(--ease);
+}
+.icon-btn:hover{background:var(--elevated)}
+.icon-btn:active{transform:scale(0.97)}
+
+/* Ауыстырғыш (toggle) */
+.sw{width:52px;height:32px;flex:none;border-radius:16px;background:var(--elevated);
+  border:1px solid var(--border);padding:3px;display:flex;
+  transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.sw i{width:24px;height:24px;border-radius:50%;background:var(--dim);display:block;
+  transition:transform var(--dur) var(--ease),background var(--dur) var(--ease)}
+.sw.on{background:var(--accent);border-color:var(--accent)}
+.sw.on i{background:var(--accent-ink);transform:translateX(20px)}
+
+/* Уақыт өрісі */
+input[type=time],input[type=number]{
+  background:var(--elevated);border:1px solid var(--border);border-radius:var(--r-btn);
+  color:var(--text);padding:12px 14px;font-size:17px;font-weight:600;
+  font-variant-numeric:tabular-nums;letter-spacing:-0.02em;
+  transition:border-color var(--dur) var(--ease)}
+input:focus{outline:none;border-color:var(--border-strong)}
+input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.6)}
+
+/* =========================================================================
+   4) КАРТОЧКА ЖӘНЕ ҚАҢҚА
+   ========================================================================= */
+#app{max-width:520px;margin:0 auto;padding:0 var(--pad) calc(var(--nav-h) + 40px)}
+.card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-card);padding:var(--card-pad);margin-bottom:var(--gap)}
+.card.pad0{padding:0;overflow:hidden}
+.card + .btn,.btn + .btn{margin-bottom:var(--gap)}
+.stack > * + *{margin-top:var(--gap)}
+
+#topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;
+  padding:14px 0 12px;background:var(--bg)}
+.brand{font-size:19px;font-weight:700;letter-spacing:-0.03em;margin-right:auto}
+.brand span{color:var(--accent)}
+.chip{display:flex;align-items:center;gap:6px;height:36px;padding:0 13px 0 11px;
+  border-radius:18px;background:var(--surface);border:1px solid var(--border);
+  color:var(--accent);font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.chip .i{width:16px;height:16px}
+
+/* Бет ауысуы: fade + 8px жоғары */
+.view{display:none}
+@keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.view.on{display:block;animation:viewIn var(--dur) var(--ease)}
+
+/* =========================================================================
+   5) БАСТЫ БЕТ
+   ========================================================================= */
+.hero{display:flex;align-items:center;gap:16px}
+.hero-l{flex:1;min-width:0}
+.hero .title{margin:8px 0 6px}
+.hero .sub{font-size:14px}
+
+/* 3 сегментті сақина: оятқыш · дене · бет */
+.ring3{position:relative;width:92px;height:92px;flex:none}
+.ring3 svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring3 .seg{fill:none;stroke:var(--elevated);stroke-width:8;stroke-linecap:round;
+  transition:stroke var(--dur) var(--ease)}
+.ring3 .seg.on{stroke:var(--accent)}
+.ring3 .val{position:absolute;inset:0;display:grid;place-items:center;
+  font-size:19px;font-weight:700;letter-spacing:-0.03em;font-variant-numeric:tabular-nums}
+
+/* Тапсырма жолы */
+.task{display:flex;align-items:center;gap:13px;padding:15px var(--card-pad);
+  border-bottom:1px solid var(--border)}
+.task:last-child{border-bottom:0}
+.t-txt{flex:1;min-width:0}
+.t-name{font-size:15px;font-weight:600;letter-spacing:-0.01em}
+.t-sub{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.tick{width:30px;height:30px;flex:none;border-radius:50%;display:grid;place-items:center;
+  border:1px solid var(--border);background:var(--elevated);color:var(--dim);
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease),
+             border-color var(--dur) var(--ease)}
+.tick .i{width:16px;height:16px;stroke-width:2.4;opacity:0}
+.task.done .tick{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.task.done .tick .i{opacity:1}
+.tick.ic{color:var(--muted)}
+.tick.ic .i{opacity:1;stroke-width:1.75}
+
+/* Streak */
+.streak{display:flex;align-items:center;gap:16px}
+.streak .fl{width:52px;height:52px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:var(--elevated);border:1px solid var(--border);color:var(--accent)}
+.streak .n{font-size:34px;font-weight:700;letter-spacing:-0.04em;
+  font-variant-numeric:tabular-nums;line-height:1}
+.streak .n small{font-size:14px;font-weight:600;color:var(--muted);
+  letter-spacing:-0.01em;margin-left:6px}
+
+/* Апталық календарь */
+.week{display:flex;gap:7px;margin-bottom:var(--gap)}
+.day{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px}
+.day .dl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.06em}
+.day .dd{width:100%;max-width:44px;aspect-ratio:1;border-radius:50%;
+  display:grid;place-items:center;background:var(--surface);border:1px solid var(--border);
+  color:var(--muted);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease),
+             border-color var(--dur) var(--ease)}
+.day .dd .i{width:16px;height:16px;stroke-width:2.4}
+.day.today .dd{border-color:var(--accent);color:var(--accent)}
+.day.on .dd{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+/* =========================================================================
+   6) ОЯТҚЫШ
+   ========================================================================= */
+.row{display:flex;align-items:center;gap:13px}
+.row + .row{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.row .t-txt{flex:1}
+.days{display:flex;gap:7px;margin-top:14px}
+.dbtn{flex:1;height:44px;border-radius:var(--r-sm);background:var(--elevated);
+  border:1px solid var(--border);color:var(--muted);font-size:13px;font-weight:600;
+  transition:transform var(--tap) var(--ease),background var(--dur) var(--ease),
+             color var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.dbtn:active{transform:scale(0.97)}
+.dbtn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.note{display:flex;gap:11px;padding:14px;border-radius:var(--r-card);
+  background:var(--elevated);border:1px solid var(--border);
+  font-size:13px;color:var(--muted);line-height:1.55}
+.note .i{width:18px;height:18px;color:var(--dim);margin-top:1px}
+
+/* =========================================================================
+   7) БАҒДАРЛАМА: сақина, апта тақырыбы, күн жолдары
+   ========================================================================= */
+.mring{position:relative;width:64px;height:64px;flex:none}
+.mring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.mring .mt{fill:none;stroke:var(--elevated);stroke-width:6}
+.mring .mv{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round;
+  transition:stroke-dashoffset var(--dur) var(--ease)}
+.mring i{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;
+  font-size:13px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+
+.pcard,.phead{display:flex;align-items:center;gap:16px}
+.pcard{cursor:pointer;transition:transform var(--tap) var(--ease),
+  border-color var(--dur) var(--ease)}
+.pcard:active{transform:scale(0.99)}
+.p-txt{flex:1;min-width:0}
+.p-n{font-size:24px;font-weight:700;letter-spacing:-0.03em;
+  font-variant-numeric:tabular-nums;line-height:1.2;margin-top:3px}
+.p-n small{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:-0.01em}
+.p-ic{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:var(--elevated);color:var(--dim)}
+.phead{margin-bottom:18px}
+
+/* Апта тақырыбы — жабысып тұрады */
+.wk-h{position:sticky;top:58px;z-index:10;display:flex;justify-content:space-between;
+  align-items:baseline;gap:10px;padding:14px 2px 10px;background:var(--bg);
+  font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;
+  color:var(--dim)}
+.wk-h span:first-child{color:var(--muted)}
+
+/* Күн жолы */
+.drow{display:flex;align-items:center;gap:13px;padding:14px var(--card-pad);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);
+  margin-bottom:8px;cursor:pointer;
+  transition:transform var(--tap) var(--ease),border-color var(--dur) var(--ease),
+             opacity var(--dur) var(--ease)}
+.drow:active{transform:scale(0.98)}
+.drow .d-ic{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:var(--elevated);border:1px solid var(--border);color:var(--dim)}
+.drow .d-ic .i{width:17px;height:17px}
+.drow .d-txt{flex:1;min-width:0}
+.drow b{display:block;font-size:13px;font-weight:700;letter-spacing:0.04em}
+.drow .d-rep{color:var(--dim);display:flex}
+.drow.done .d-ic{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.drow.done b{color:var(--muted)}
+.drow.today{border-color:var(--accent)}
+.drow.today .d-ic{color:var(--accent);border-color:var(--accent)}
+.drow.lock{opacity:0.5;cursor:default}
+.drow.lock:active{transform:none}
+.drow.rest .d-ic{color:var(--muted)}
+.drow.rest.today .d-ic{color:var(--accent)}
+
+/* =========================================================================
+   8) БЕТ ЖАТТЫҒУЛАРЫ
+   ========================================================================= */
+.steps{list-style:none;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding-left:32px;
+  margin-bottom:10px;font-size:14px;color:var(--muted);line-height:1.55}
+.steps li:last-child{margin-bottom:0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:0;
+  width:22px;height:22px;border-radius:7px;background:var(--elevated);
+  color:var(--accent);font-size:11px;font-weight:700;display:grid;place-items:center}
+.why{margin-top:12px;padding:13px;border-radius:var(--r-sm);background:var(--elevated);
+  font-size:13px;color:var(--muted);line-height:1.55}
+.why b{color:var(--accent);font-weight:600}
+
+/* =========================================================================
+   9) СТАТИСТИКА
+   ========================================================================= */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:var(--gap)}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);
+  padding:16px 12px;text-align:center}
+.stat .v{font-size:26px;font-weight:700;letter-spacing:-0.04em;
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .k{font-size:11px;color:var(--dim);text-transform:uppercase;
+  letter-spacing:0.08em;margin-top:7px;font-weight:600}
+#chart{width:100%;height:auto;display:block}
+
+/* =========================================================================
+   10) ТӨМЕНГІ НАВИГАЦИЯ
+   ========================================================================= */
+#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;
+  background:rgba(10,10,11,0.94);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);
+  padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1;min-height:var(--nav-h);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:5px;color:var(--dim);
+  font-size:11px;font-weight:600;letter-spacing:-0.005em;
+  transition:color var(--dur) var(--ease)}
+.tab .dot{width:4px;height:4px;border-radius:50%;background:transparent;
+  transition:background var(--dur) var(--ease)}
+.tab.on{color:var(--accent)}
+.tab.on .dot{background:var(--accent)}
+
+/* =========================================================================
+   11) ОВЕРЛЕЙЛЕР (жаттығу, оятқыш, onboarding)
+   ========================================================================= */
+.ov{position:fixed;inset:0;z-index:50;background:var(--bg);
+  display:none;overflow-y:auto;padding:16px var(--pad) 32px}
+.ov.show{display:block;animation:viewIn var(--dur) var(--ease)}
+.ov > div{max-width:520px;margin:0 auto}
+
+.r-top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.r-ttl{flex:1;min-width:0;text-align:center}
+.r-ttl #r-title{font-size:14px;font-weight:600;letter-spacing:-0.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#r-phase{min-width:var(--icon-btn);text-align:right;white-space:nowrap;color:var(--accent)}
+.ov.rest #r-phase{color:var(--muted)}
+
+.line{height:3px;border-radius:3px;background:var(--elevated);overflow:hidden}
+.line i{display:block;height:100%;width:0;background:var(--accent);
+  transition:width 400ms var(--ease)}
+
+.timer{position:relative;width:236px;height:236px;margin:26px auto 20px}
+.timer svg{width:100%;height:100%;transform:rotate(-90deg)}
+#r-ring{fill:none;stroke:var(--elevated);stroke-width:6}
+#r-arc{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round;
+  transition:stroke-dashoffset 900ms linear}
+.ov.rest #r-arc{stroke:var(--muted)}
+.timer .val{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-size:84px;font-weight:700;letter-spacing:-0.04em;font-variant-numeric:tabular-nums;
+  line-height:1}
+.timer .val i{font-style:normal;margin-top:8px}
+.ov.reps #r-arc{stroke:var(--elevated)}
+
+.metric{font-size:15px;font-weight:700;letter-spacing:0.06em;color:var(--accent);
+  font-variant-numeric:tabular-nums;margin-bottom:6px}
+.new{display:inline-block;margin-right:9px;padding:3px 8px;border-radius:7px;
+  background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700;
+  letter-spacing:0.1em;vertical-align:2px}
+#r-name{margin-bottom:8px}
+#r-next{font-size:14px;margin-bottom:18px}
+.nxt .t-name{margin-top:8px;font-size:17px}
+.nxt .t-sub{margin-top:6px}
+.done-ring{display:flex;align-items:center;justify-content:center;gap:16px;
+  margin-top:22px;padding:16px;border:1px solid var(--border);border-radius:var(--r-card);
+  background:var(--surface)}
+.done-ring .d-r-txt{text-align:left}
+#d-phrase{font-size:14px}
+#r-visual{margin-bottom:var(--gap)}
+#r-instr{font-size:14px;color:var(--muted);line-height:1.6}
+.r-btns{display:flex;gap:10px;margin-top:18px}
+.r-btns .btn{flex:1;flex-direction:column;gap:5px;min-height:64px;font-size:12px}
+.r-btns .btn .i{width:22px;height:22px}
+#r-done{flex:1.5;flex-direction:row;gap:6px;font-size:14px;letter-spacing:0.04em}
+#r-done .i{width:18px;height:18px}
+.mis{display:flex;gap:9px;margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--border);color:var(--danger);font-size:13px}
+.mis .i{width:16px;height:16px;margin-top:2px;flex:none}
+
+/* Аяқтау экраны */
+.done-wrap{padding-top:44px;text-align:center}
+.done-ic{width:84px;height:84px;margin:0 auto 22px;border-radius:50%;
+  background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;
+  animation:pop 420ms var(--ease) both}
+@keyframes pop{from{transform:scale(0.6);opacity:0}to{transform:scale(1);opacity:1}}
+.done-ic .i path{stroke-dasharray:26;stroke-dashoffset:26;
+  animation:draw 380ms var(--ease) 160ms forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.done-ic .i{width:40px;height:40px;stroke-width:2.2}
+.done-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:26px 0}
+
+/* Жаттығу фигурасы: дұрыс қалып + «елес» қате қалып */
+.fig{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-card);padding:18px}
+.fig svg{width:100%;max-width:230px;height:auto;margin:0 auto}
+.fig .fnote{display:flex;align-items:center;justify-content:center;gap:9px;
+  margin-top:12px;font-size:13px;color:var(--muted);text-align:center}
+.fig .fnote em{width:7px;height:7px;flex:none;border-radius:50%;
+  background:var(--danger);opacity:0.7}
+.fig .flab{display:flex;justify-content:center;gap:18px;margin-top:14px}
+.fig .flab span{display:flex;align-items:center;gap:6px;font-size:11px;
+  font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--dim)}
+.fig .flab i{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.fig .flab .bad i{background:var(--danger);opacity:0.4}
+/* Фигура сызықтары: дұрыс — лайм, қате — қызыл «елес» */
+.fig .ok{stroke:var(--accent);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.fig .ok.solid{fill:var(--accent);stroke:var(--accent);stroke-width:3}
+.fig .bad{stroke:var(--danger);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.fig .bad.solid{fill:var(--danger);stroke:var(--danger);stroke-width:3}
+.fig .ghost{opacity:0.35}
+
+.fig.face svg{max-width:190px}
+/* Бет сызбасы */
+.f-line{fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
+.f-dim{fill:none;stroke:var(--dim);stroke-width:2.4;stroke-linecap:round}
+.f-eye{fill:var(--muted)}
+.f-mouth{fill:none;stroke:var(--accent);stroke-width:2.4}
+.f-hand{fill:var(--accent)}
+.f-halo{fill:var(--accent);opacity:0.16}
+.f-cheek{fill:var(--accent);opacity:0.18}
+.f-arrow{fill:none;stroke:var(--accent);stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;opacity:0.75}
+
+/* Оятқыш соғып тұрғанда */
+.ring-wrap{min-height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:30px 0}
+#ring-face{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;
+  background:var(--surface);border:1px solid var(--accent);color:var(--accent);
+  margin-bottom:24px}
+#ring-face .i{width:44px;height:44px}
+#ring-time{font-size:64px;font-weight:700;letter-spacing:-0.04em;
+  font-variant-numeric:tabular-nums;line-height:1}
+#ring-task{width:100%;margin-top:28px;display:none}
+#ring-math{font-size:34px;font-weight:700;letter-spacing:-0.03em;
+  font-variant-numeric:tabular-nums;margin-bottom:16px}
+#ring-ans{width:100%;text-align:center;font-size:26px;padding:16px}
+#ring-ans.err{border-color:var(--danger);color:var(--danger)}
+
+/* Onboarding */
+.ob-wrap{min-height:100%;display:flex;flex-direction:column;padding-top:34px}
+#ob-dots{display:flex;gap:7px;margin-bottom:30px}
+#ob-dots i{width:26px;height:4px;border-radius:2px;background:var(--elevated);
+  transition:background var(--dur) var(--ease)}
+#ob-dots i.on{background:var(--accent)}
+#ob-hint{margin:10px 0 26px;font-size:14px}
+.ob-opt{display:block;width:100%;text-align:left;padding:17px 18px;margin-bottom:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);
+  color:var(--text);font-size:15px;font-weight:500;
+  transition:transform var(--tap) var(--ease),border-color var(--dur) var(--ease),
+             background var(--dur) var(--ease)}
+.ob-opt:active{transform:scale(0.97)}
+.ob-opt.on{background:var(--accent);border-color:var(--accent);
+  color:var(--accent-ink);font-weight:600}
+.ob-btns{margin-top:auto;padding-top:24px;display:flex;gap:10px}
+.ob-btns .btn{flex:1}
+#ob-back{display:none;flex:0 0 var(--icon-btn)}
+
+/* Toast */
+#toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 18px);z-index:80;
+  transform:translate(-50%,14px);opacity:0;pointer-events:none;
+  max-width:calc(100% - 40px);padding:13px 18px;border-radius:var(--r-btn);
+  background:var(--elevated);border:1px solid var(--border-strong);
+  color:var(--text);font-size:14px;text-align:center;
+  transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease)}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* Skeleton — градиентсіз, тек жұмсақ opacity */
+#skeleton{position:fixed;inset:0;z-index:90;background:var(--bg);
+  padding:70px var(--pad);transition:opacity 300ms var(--ease)}
+.sk{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-card);margin-bottom:var(--gap);animation:sk 1.2s ease-in-out infinite}
+@keyframes sk{0%,100%{opacity:0.5}50%{opacity:0.9}}
+.sk.a{height:108px}.sk.b{height:168px}.sk.c{height:84px}
+
+/* Оятқыш дыбысының тізімі */
+.snd{display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  padding:14px var(--card-pad);margin-bottom:8px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-card);color:var(--text);
+  transition:transform var(--tap) var(--ease),border-color var(--dur) var(--ease)}
+.snd:active{transform:scale(0.98)}
+.snd.on{border-color:var(--accent)}
+.snd-p{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:var(--elevated);border:1px solid var(--border);color:var(--accent);
+  transition:background var(--dur) var(--ease)}
+.snd-p .i{width:18px;height:18px}
+.snd-p.playing{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.snd-t{flex:1;min-width:0}
+.snd-t b{display:block;font-size:13px;font-weight:700;letter-spacing:0.06em}
+.snd-t .t-sub{margin-top:3px}
+.pw{display:flex;gap:3px;flex:none}
+.pw i{width:4px;height:16px;border-radius:2px;background:var(--elevated)}
+.pw i.f{background:var(--accent)}
+.snd.warn .pw i.f{background:var(--danger)}
+
+/* =========================================================================
+   12) ПРОГРЕСС ФОТОСЫ (бәрі тек осы құрылғыда сақталады)
+   ========================================================================= */
+.segbar{display:flex;gap:5px;padding:5px;margin-bottom:var(--gap);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-btn)}
+.seg-b{flex:1;height:42px;border-radius:10px;color:var(--dim);font-size:14px;font-weight:600;
+  letter-spacing:-0.01em;transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+.seg-b.on{background:var(--elevated);color:var(--text)}
+
+.chips{display:flex;gap:8px;margin-bottom:var(--gap)}
+.chip-b{flex:1;height:40px;border-radius:var(--r-sm);background:var(--surface);
+  border:1px solid var(--border);color:var(--muted);font-size:13px;font-weight:600;
+  transition:transform var(--tap) var(--ease),background var(--dur) var(--ease),
+             color var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.chip-b:active{transform:scale(0.97)}
+.chip-b.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+/* Түсіру түймелері */
+.shot-row{display:flex;gap:8px;margin-bottom:var(--gap)}
+.shot-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:7px;min-height:78px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-card);color:var(--text);font-size:12px;font-weight:600;
+  transition:transform var(--tap) var(--ease),border-color var(--dur) var(--ease)}
+.shot-b:active{transform:scale(0.97)}
+.shot-b .i{color:var(--accent)}
+.shot-b span{color:var(--dim);font-size:11px;font-weight:600;letter-spacing:0.04em;
+  font-variant-numeric:tabular-nums}
+
+/* Фото торы */
+.ph-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:var(--gap)}
+.ph-cell{position:relative;aspect-ratio:3/4;border-radius:12px;overflow:hidden;
+  background:var(--elevated);border:1px solid var(--border);cursor:pointer;
+  transition:transform var(--tap) var(--ease)}
+.ph-cell:active{transform:scale(0.97)}
+.ph-cell img{width:100%;height:100%;object-fit:cover;display:block}
+.ph-cell b{position:absolute;left:6px;top:6px;padding:3px 7px;border-radius:7px;
+  background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700;
+  letter-spacing:0.06em}
+.ph-cell i{position:absolute;left:0;right:0;bottom:0;padding:5px 6px;
+  background:rgba(10,10,11,0.72);
+  color:var(--text);font-size:10px;font-style:normal;font-weight:600;text-align:center}
+.ph-empty{padding:26px 20px;text-align:center}
+.ph-empty p{color:var(--muted);font-size:14px;margin-bottom:18px;line-height:1.6}
+
+/* Еске салу баннері */
+.ph-remind{align-items:center}
+.ph-remind .i{color:var(--accent)}
+.ph-remind button{flex:none;color:var(--dim);display:flex}
+
+/* Түсіру экраны */
+.shot-frame{position:relative;aspect-ratio:3/4;max-width:340px;margin:0 auto var(--gap);
+  border-radius:var(--r-card);overflow:hidden;background:var(--surface);
+  border:1px solid var(--border);display:grid;place-items:center}
+.shot-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* Көлеңке жаңа фотоның ҮСТІНДЕ тұрады — қалыпты дәл сәйкестендіру үшін */
+.shot-frame #shot-ghost{opacity:0.25;z-index:2}
+.shot-frame .ph-none{color:var(--dim);font-size:13px;padding:20px;text-align:center}
+.shot-cap{text-align:center;font-size:12px;color:var(--muted);margin-bottom:var(--gap)}
+
+/* Толық экран қарау */
+.pv-wrap{position:relative;width:100%;aspect-ratio:3/4;border-radius:var(--r-card);
+  overflow:hidden;background:var(--surface);border:1px solid var(--border);
+  margin-bottom:var(--gap);touch-action:pan-y}
+.pv-wrap img{width:100%;height:100%;object-fit:contain;display:block}
+.pv-meta{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px}
+.pv-meta b{padding:4px 10px;border-radius:8px;background:var(--accent);color:var(--accent-ink);
+  font-size:11px;font-weight:700;letter-spacing:0.06em}
+
+/* Салыстыру: тік сырғытпа */
+.cmp{position:relative;width:100%;aspect-ratio:3/4;border-radius:var(--r-card);overflow:hidden;
+  background:var(--surface);border:1px solid var(--border);margin-bottom:14px;
+  touch-action:none;user-select:none}
+.cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.cmp .cmp-new{position:absolute;inset:0;overflow:hidden}
+.cmp .cmp-h{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);
+  transform:translateX(-1px)}
+.cmp .cmp-h em{position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;
+  border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-style:normal;font-size:15px;font-weight:700}
+.cmp .cmp-tag{position:absolute;top:10px;padding:4px 9px;border-radius:8px;
+  background:rgba(10,10,11,0.72);color:var(--text);font-size:10px;font-weight:700;
+  letter-spacing:0.08em}
+.cmp .t-a{left:10px}
+.cmp .t-b{right:10px;background:var(--accent);color:var(--accent-ink)}
+.cmp-lab{text-align:center;font-size:15px;font-weight:700;letter-spacing:0.04em;
+  color:var(--accent);font-variant-numeric:tabular-nums;margin-bottom:16px}
+.strip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin-bottom:6px}
+.strip::-webkit-scrollbar{display:none}
+.strip button{flex:none;width:58px;aspect-ratio:3/4;border-radius:10px;overflow:hidden;
+  border:2px solid transparent;background:var(--elevated);position:relative}
+.strip button img{width:100%;height:100%;object-fit:cover;display:block}
+.strip button.on{border-color:var(--accent)}
+.strip button i{position:absolute;left:0;right:0;bottom:0;padding:3px 2px;font-style:normal;
+  background:rgba(10,10,11,0.78);
+  color:var(--text);font-size:9px;font-weight:700;text-align:center}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:0.01ms !important;transition-duration:0.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<!-- Жүктелу қаңқасы -->
+<div id="skeleton"><div class="sk a"></div><div class="sk b"></div><div class="sk c"></div></div>
+
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand">Fit<span>Day</span></div>
+    <div class="chip" id="chip-streak">
+      <svg class="i" viewBox="0 0 24 24"><path d="M8.5 14.6a2.5 2.5 0 0 0 2.5-2.5c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5Z"/></svg>
+      <span>0</span>
+    </div>
+    <button class="icon-btn" id="go-stats" aria-label="Статистика">
+      <svg class="i" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M8 16v-5M13 16V7M18 16v-8"/></svg>
+    </button>
+    <button class="icon-btn" id="go-set" aria-label="Баптау">
+      <svg class="i" viewBox="0 0 24 24"><path d="M4 7h9M18 7h2M4 17h5M14 17h6"/><circle cx="15.5" cy="7" r="2.2"/><circle cx="11.5" cy="17" r="2.2"/></svg>
+    </button>
+  </header>
+
+  <main id="main">
+
+    <!-- ============ 1) БАСТЫ БЕТ ============ -->
+    <section class="view on" id="v-home">
+      <div class="card hero">
+        <div class="hero-l">
+          <span class="label" id="h-date">—</span>
+          <h1 class="title" id="h-greet">Қайырлы таң!</h1>
+          <p class="sub muted" id="h-sub">Бүгін 0/3 тапсырма орындалды.</p>
+        </div>
+        <!-- 3 сегмент: оятқыш · дене · бет. C = 2π·42 ≈ 263.9 -->
+        <div class="ring3">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="seg" data-seg="alarm" cx="50" cy="50" r="42"
+              stroke-dasharray="72 191.9" stroke-dashoffset="0"></circle>
+            <circle class="seg" data-seg="body" cx="50" cy="50" r="42"
+              stroke-dasharray="72 191.9" stroke-dashoffset="-88"></circle>
+            <circle class="seg" data-seg="face" cx="50" cy="50" r="42"
+              stroke-dasharray="72 191.9" stroke-dashoffset="-176"></circle>
+          </svg>
+          <div class="val" id="h-ring-val">0/3</div>
+        </div>
+      </div>
+
+      <button class="note ph-remind" id="h-photo-remind" style="display:none;width:100%;text-align:left">
+        <svg class="i" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v10h-15z"/><circle cx="12" cy="13" r="3.2"/></svg>
+        <span style="flex:1"><b style="color:var(--text);font-weight:600">Фото түсіретін уақыт келді.</b>
+        Прогресті көзбен көру үшін жаңа фото қос.</span>
+        <svg class="i i-sm" viewBox="0 0 24 24" style="color:var(--dim)"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
+      </button>
+
+      <span class="label sec">Бағдарламалар</span>
+      <div id="h-programs"></div>
+
+      <span class="label sec">Бүгінгі жоспар</span>
+      <div class="card pad0" id="h-tasks">
+        <div class="task" data-task="alarm">
+          <div class="tick"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 6.5"/></svg></div>
+          <div class="t-txt"><div class="t-name">Оятқыш</div>
+            <span class="t-sub">Тұрып, күнді уақытында баста</span></div>
+          <button class="btn sm" data-nav="alarm">Ашу</button>
+        </div>
+      </div>
+
+      <div class="card streak">
+        <div class="fl">
+          <svg class="i" viewBox="0 0 24 24" style="width:26px;height:26px">
+            <path d="M8.5 14.6a2.5 2.5 0 0 0 2.5-2.5c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5Z"/></svg>
+        </div>
+        <div style="flex:1">
+          <div class="n"><span id="h-streak">0</span><small>күн қатарынан</small></div>
+          <span class="t-sub" id="h-streak-sub">Бүгін бастасаң — есеп жүреді</span>
+        </div>
+      </div>
+
+      <span class="label sec">Осы апта</span>
+      <div class="week" id="h-week"></div>
+
+      <button class="btn" id="h-install" style="display:none">
+        <svg class="i" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M8 11.5 12 15.5l4-4"/><path d="M5 19h14"/></svg>
+        Телефонға орнату
+      </button>
+    </section>
+
+    <!-- ============ 2) ОЯТҚЫШ ============ -->
+    <section class="view" id="v-alarm">
+      <span class="label sec">Оятқыш</span>
+      <div class="card">
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Ояту уақыты</div>
+            <span class="t-sub" id="a-state">Өшірулі</span></div>
+          <input type="time" id="a-time" value="07:00">
+        </div>
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Оятқыш қосулы</div>
+            <span class="t-sub">Бет ашық тұрғанда ғана соғады</span></div>
+          <button class="sw" id="a-on" aria-label="Оятқышты қосу"><i></i></button>
+        </div>
+        <div class="row" style="display:block">
+          <span class="label">Қайталау күндері</span>
+          <div class="days" id="a-days"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Ояту тапсырмасы</div>
+            <span class="t-sub">Өшіру үшін мысал шығару керек</span></div>
+          <button class="sw on" id="a-math" aria-label="Математика тапсырмасы"><i></i></button>
+        </div>
+      </div>
+
+      <span class="label sec">Оятқыш дыбысы</span>
+      <div id="a-sounds"></div>
+
+      <div class="card">
+        <div class="row" style="display:block">
+          <span class="label">Дыбыстың шыңы</span>
+          <div class="chips" id="a-peak" style="margin:12px 0 0">
+            <button class="chip-b" data-v="0.5">50%</button>
+            <button class="chip-b" data-v="0.75">75%</button>
+            <button class="chip-b on" data-v="1">100%</button>
+          </div>
+        </div>
+        <div class="row" style="display:block">
+          <span class="label">Күшею жылдамдығы</span>
+          <div class="chips" id="a-ramp" style="margin:12px 0 0">
+            <button class="chip-b" data-v="slow">Баяу</button>
+            <button class="chip-b on" data-v="normal">Қалыпты</button>
+            <button class="chip-b" data-v="fast">Жылдам</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Вибрация</div>
+            <span class="t-sub">Дыбыс ритмімен бірге күшейеді</span></div>
+          <button class="sw on" id="a-vibro"><i></i></button>
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-bottom:var(--gap)">
+        <button class="btn" id="a-test">
+          <svg class="i" viewBox="0 0 24 24"><path d="M5 9.5h3L12 6v12l-4-3.5H5z"/><path d="M15.5 9.5a4 4 0 0 1 0 5"/></svg>
+          Дыбысты тексер
+        </button>
+        <button class="btn" id="a-stop-test">
+          <svg class="i" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/></svg>
+          Тоқтат
+        </button>
+      </div>
+
+      <div id="a-after" style="display:none;margin-bottom:var(--gap)">
+        <button class="btn primary" id="a-go-workout">
+          <svg class="i" viewBox="0 0 24 24"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg>
+          Таңғы жаттығуды баста
+        </button>
+      </div>
+
+      <div class="note">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6h.01"/></svg>
+        <span>Дыбыс тек қосымша ашық тұрғанда шығады. Браузерді жапсаң немесе телефон
+        толық ұйықтап кетсе, оятқыш соқпайды. Сенімді болу үшін телефонның жүйелік
+        оятқышын да қатар қой.</span>
+      </div>
+    </section>
+
+    <!-- ============ 3) ДЕНЕ БАҒДАРЛАМАСЫ ============ -->
+    <section class="view" id="v-body">
+      <span class="label sec">30 күнде форма</span>
+      <div id="p-body"></div>
+    </section>
+
+    <!-- ============ 4) БЕТ БАҒДАРЛАМАСЫ ============ -->
+    <section class="view" id="v-face">
+      <span class="label sec">30 күнде бет сопақшасы</span>
+      <div id="p-face"></div>
+    </section>
+
+    <!-- ============ ПРОГРЕСС: СТАТИСТИКА + ФОТО ============ -->
+    <section class="view" id="v-stats">
+      <span class="label sec">Прогресс</span>
+      <div class="segbar">
+        <button class="seg-b on" data-ptab="stats">Статистика</button>
+        <button class="seg-b" data-ptab="photo">Фото</button>
+      </div>
+
+      <div id="tab-photo" style="display:none">
+        <div class="note ph-remind" id="ph-remind" style="display:none">
+          <svg class="i" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v10h-15z"/><circle cx="12" cy="13" r="3.2"/></svg>
+          <span style="flex:1"><b style="color:var(--text);font-weight:600">Фото түсіретін уақыт келді.</b>
+          Соңғы фотодан бері <span id="ph-rem-days">7</span> күн өтті.</span>
+          <button id="ph-rem-x" aria-label="Жабу">
+            <svg class="i i-sm" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+
+        <div class="shot-row" id="ph-shoot">
+          <button class="shot-b" data-type="front">
+            <svg class="i" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v10h-15z"/><circle cx="12" cy="13" r="3.2"/></svg>
+            Алдынан<span data-count="front">0</span>
+          </button>
+          <button class="shot-b" data-type="side">
+            <svg class="i" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v10h-15z"/><circle cx="12" cy="13" r="3.2"/></svg>
+            Бүйірден<span data-count="side">0</span>
+          </button>
+          <button class="shot-b" data-type="face">
+            <svg class="i" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v10h-15z"/><circle cx="12" cy="13" r="3.2"/></svg>
+            Бет<span data-count="face">0</span>
+          </button>
+        </div>
+
+        <div class="note" style="margin-bottom:var(--gap)">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 3.5 19 6v6c0 4.2-2.8 7.4-7 8.5-4.2-1.1-7-4.3-7-8.5V6z"/><path d="M9.2 12.2 11.3 14.3 15 10.6"/></svg>
+          <span>Фотоларың <b style="color:var(--text);font-weight:600">тек осы телефонда</b>
+          сақталады, ешқайда жіберілмейді. Сервер де, жүктеу де жоқ.</span>
+        </div>
+
+        <div class="chips" id="ph-filter">
+          <button class="chip-b on" data-type="front">Алдынан</button>
+          <button class="chip-b" data-type="side">Бүйірден</button>
+          <button class="chip-b" data-type="face">Бет</button>
+        </div>
+
+        <div class="ph-grid" id="ph-grid"></div>
+
+        <div class="card ph-empty" id="ph-empty" style="display:none">
+          <p>Бүгін бірінші фотоңды түсір — 30 күннен кейін айырманы<br>өз көзіңмен көресің.</p>
+          <button class="btn primary" id="ph-first">
+            <svg class="i" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v10h-15z"/><circle cx="12" cy="13" r="3.2"/></svg>
+            ФОТО ТҮСІРУ
+          </button>
+        </div>
+
+        <button class="btn primary" id="ph-compare">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M4.5 6.5h5v11h-5z"/><path d="M14.5 6.5h5v11h-5z"/></svg>
+          Салыстыру
+        </button>
+      </div>
+
+      <div id="tab-stats">
+      <div class="grid3">
+        <div class="stat"><div class="v" id="s-total">0</div><div class="k">Күн</div></div>
+        <div class="stat"><div class="v" id="s-best">0</div><div class="k">Рекорд</div></div>
+        <div class="stat"><div class="v" id="s-min">0</div><div class="k">Минут</div></div>
+      </div>
+      <span class="label sec">Соңғы 7 күн</span>
+      <div class="card"><canvas id="chart" width="640" height="330"></canvas></div>
+      <div class="note">
+        <svg class="i" viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/></svg>
+        <span><b style="color:var(--text);font-weight:600">Кешірім күні (freeze).</b>
+        <span id="s-freeze">Қолжетімді: 1</span></span>
+      </div>
+      <button class="btn ghost" data-nav="home">Басты бетке</button>
+      </div>
+    </section>
+
+    <!-- ============ БАПТАУ ============ -->
+    <section class="view" id="v-set">
+      <span class="label sec">Баптау</span>
+      <div class="card">
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Дыбыс</div>
+            <span class="t-sub">Сигнал мен оятқыш үні</span></div>
+          <button class="sw" id="st-sound"><i></i></button>
+        </div>
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Вибрация</div>
+            <span class="t-sub">Түйме мен ауысу кезінде</span></div>
+          <button class="sw" id="st-vibro"><i></i></button>
+        </div>
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Дауыстық сүйемелдеу</div>
+            <span class="t-sub">Санау мен жаттығу атауы</span></div>
+          <button class="sw" id="st-voice"><i></i></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Күнделікті еске салу</div>
+            <span class="t-sub" id="st-notif-sub">Өшірулі</span></div>
+          <button class="sw" id="st-notif"><i></i></button>
+        </div>
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Еске салу уақыты</div>
+            <span class="t-sub">Жаттығуды ұмытпау үшін</span></div>
+          <input type="time" id="st-rtime" value="08:00">
+        </div>
+        <div class="row">
+          <div class="t-txt"><div class="t-name">Фото еске салу</div>
+            <span class="t-sub">7 күн сайын қосымша ішінде баннер</span></div>
+          <button class="sw" id="st-photo"><i></i></button>
+        </div>
+      </div>
+
+      <span class="label sec">Профиль</span>
+      <div class="card pad0" id="st-prof"></div>
+      <button class="btn" id="st-redo" style="margin-bottom:var(--gap)">
+        <svg class="i" viewBox="0 0 24 24"><path d="M20 5.5v5h-5"/><path d="M19.4 10.5a7.5 7.5 0 1 0-.7 6"/></svg>
+        Сауалнаманы қайта өту
+      </button>
+
+      <span class="label sec">Дерек</span>
+      <div class="btn-row" style="margin-bottom:var(--gap)">
+        <button class="btn" id="st-export">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M8 8 12 4l4 4"/><path d="M5 19h14"/></svg>
+          Экспорт
+        </button>
+        <button class="btn" id="st-import">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M8 12l4 4 4-4"/><path d="M5 19h14"/></svg>
+          Импорт
+        </button>
+      </div>
+      <input type="file" id="st-file" accept="application/json" style="display:none">
+      <button class="btn" id="st-export-ph" style="margin-bottom:var(--gap)">
+        <svg class="i" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v10h-15z"/><circle cx="12" cy="13" r="3.2"/></svg>
+        Фотолармен бірге экспорттау
+      </button>
+      <button class="btn danger" id="st-reset">
+        <svg class="i" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg>
+        Прогресті нөлдеу
+      </button>
+      <p class="label" style="text-align:center;margin-top:18px">FitDay · v1 · офлайн</p>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ ТӨМЕНГІ НАВИГАЦИЯ ============ -->
+<nav id="tabbar">
+  <button class="tab on" data-nav="home">
+    <svg class="i" viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9.8V20h13V9.8"/><path d="M10 20v-5h4v5"/></svg>
+    Басты<span class="dot"></span>
+  </button>
+  <button class="tab" data-nav="alarm">
+    <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.8"/><path d="M4.5 5.2 7 3.2M19.5 5.2 17 3.2"/></svg>
+    Оятқыш<span class="dot"></span>
+  </button>
+  <button class="tab" data-nav="body">
+    <svg class="i" viewBox="0 0 24 24"><path d="M4 9v6M7 6.5v11M17 6.5v11M20 9v6M7 12h10"/></svg>
+    Жаттығу<span class="dot"></span>
+  </button>
+  <button class="tab" data-nav="face">
+    <svg class="i" viewBox="0 0 24 24"><path d="M4.5 10.5a7.5 8.8 0 0 1 15 0v2.2a7.5 8.8 0 0 1-15 0Z"/><path d="M9 11h.01M15 11h.01"/><path d="M9.8 15.4c1.3 1 3.1 1 4.4 0"/></svg>
+    Бет<span class="dot"></span>
+  </button>
+</nav>
+
+<!-- ============ ЖАТТЫҒУ РЕЖИМІ ============ -->
+<div class="ov" id="ov-run">
+  <div id="run-live">
+    <div class="r-top">
+      <button class="icon-btn" id="r-close" aria-label="Жабу">
+        <svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="r-ttl">
+        <div id="r-title">1-КҮН · 1/8 жаттығу</div>
+      </div>
+      <span class="label" id="r-phase">Жұмыс</span>
+    </div>
+
+    <div class="line"><i id="r-bar"></i></div>
+
+    <div class="timer">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle id="r-ring" cx="60" cy="60" r="52"></circle>
+        <circle id="r-arc" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="0"></circle>
+      </svg>
+      <div class="val"><span id="r-sec">30</span><i class="label" id="r-unit">СЕК</i></div>
+    </div>
+
+    <h2 class="title tac" id="r-name">Сквот</h2>
+    <div class="metric tac" id="r-metric">14 РЕТ</div>
+    <p class="muted tac" id="r-next">Келесі: демалыс</p>
+
+    <div id="r-visual"></div>
+    <div class="card" id="r-instr"></div>
+
+    <div class="r-btns">
+      <button class="btn" id="r-back">
+        <svg class="i" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+        Артқа
+      </button>
+      <button class="btn" id="r-pause">
+        <svg class="i" viewBox="0 0 24 24"><path d="M9.5 5v14M14.5 5v14"/></svg>
+        Пауза
+      </button>
+      <button class="btn primary" id="r-done">ДАЙЫН</button>
+    </div>
+  </div>
+
+  <div id="run-done" style="display:none">
+    <div class="done-wrap">
+      <div class="done-ic">
+        <svg class="i" viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 6.5"/></svg>
+      </div>
+      <h2 class="title" id="d-title">1-КҮН АЯҚТАЛДЫ</h2>
+      <p class="muted" id="d-sub" style="margin-top:6px">Келесі күн ертең ашылады</p>
+      <div class="metric" id="d-stats" style="margin-top:16px">7 мин · 84 ккал · 8 жаттығу</div>
+      <div class="done-ring">
+        <div id="d-ring"></div>
+        <div class="d-r-txt"><span class="label">Бағдарлама</span>
+          <div class="p-n" id="d-days">1 / 30</div></div>
+      </div>
+      <p class="muted" id="d-phrase" style="margin:18px 0 22px">—</p>
+      <button class="btn primary" id="d-ok">ЖАБУ</button>
+      <button class="btn" id="d-cycle" style="display:none;margin-top:10px">
+        <svg class="i" viewBox="0 0 24 24"><path d="M20 5.5v5h-5"/><path d="M19.4 10.5a7.5 7.5 0 1 0-.7 6"/></svg>
+        2-айналымды баста
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ОЯТҚЫШ СОҒЫП ТҰР ============ -->
+<div class="ov" id="ov-ring">
+  <div class="ring-wrap">
+    <div id="ring-face">
+      <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.8"/><path d="M4.5 5.2 7 3.2M19.5 5.2 17 3.2"/></svg>
+    </div>
+    <div id="ring-time">07:00</div>
+    <p class="muted" style="margin-top:10px">Тұратын уақыт келді!</p>
+
+    <div id="ring-task">
+      <span class="label">Ояту тапсырмасы</span>
+      <div id="ring-math" style="margin-top:10px">17 + 28 = ?</div>
+      <input type="number" id="ring-ans" inputmode="numeric" placeholder="жауап">
+      <button class="btn primary" id="ring-check" style="margin-top:12px">Тексеру</button>
+    </div>
+
+    <button class="btn primary" id="ring-off" style="margin-top:26px">Оятқышты өшіру</button>
+  </div>
+</div>
+
+<!-- ============ ONBOARDING ============ -->
+<div class="ov" id="ov-onboard">
+  <div class="ob-wrap">
+    <div id="ob-dots"><i class="on"></i><i></i><i></i></div>
+    <h2 class="title" id="ob-q">Жасың нешеде?</h2>
+    <p class="muted" id="ob-hint">Жүктемені дұрыс таңдау үшін керек.</p>
+    <div id="ob-opts"></div>
+    <div class="ob-btns">
+      <button class="btn" id="ob-back" aria-label="Артқа">
+        <svg class="i" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+      <button class="btn primary" id="ob-next">Әрі қарай</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ФОТО ТҮСІРУ ============ -->
+<div class="ov" id="ov-shot">
+  <div>
+    <div class="r-top">
+      <button class="icon-btn" id="sh-close" aria-label="Жабу">
+        <svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="r-ttl"><div id="sh-title">АЛДЫНАН</div></div>
+      <span class="label" id="sh-day">1-КҮН</span>
+    </div>
+
+    <div class="shot-frame" id="shot-frame">
+      <div class="ph-none" id="shot-none">Мұнда жаңа фотоң көрінеді</div>
+      <img id="shot-ghost" alt="" style="display:none">
+      <img id="shot-new" alt="" style="display:none">
+    </div>
+    <div class="shot-cap" id="shot-cap">Алдыңғы фотоға сәйкестендір</div>
+
+    <div class="note" style="margin-bottom:var(--gap)">
+      <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6h.01"/></svg>
+      <span>Бір жарық, бір қашықтық, бір қалып. Ең дұрысы — таңертең,
+      аш қарынға, бір киімде түсіру. Сонда айырма шынайы көрінеді.</span>
+    </div>
+
+    <button class="btn primary" id="sh-take">
+      <svg class="i" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v10h-15z"/><circle cx="12" cy="13" r="3.2"/></svg>
+      ФОТО ТҮСІРУ
+    </button>
+    <div class="btn-row" id="sh-actions" style="display:none;margin-top:10px">
+      <button class="btn" id="sh-retry">Қайта түсіру</button>
+      <button class="btn primary" id="sh-save">САҚТАУ</button>
+    </div>
+    <button class="btn ghost" id="sh-ghost-t" style="display:none;margin-top:10px">
+      Көлеңкені жасыру
+    </button>
+  </div>
+</div>
+
+<!-- ============ ФОТОНЫ ТОЛЫҚ КӨРУ ============ -->
+<div class="ov" id="ov-photo">
+  <div>
+    <div class="r-top">
+      <button class="icon-btn" id="pv-close" aria-label="Жабу">
+        <svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="r-ttl"><div id="pv-title">Алдынан</div></div>
+      <button class="icon-btn" id="pv-del" aria-label="Өшіру">
+        <svg class="i" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg>
+      </button>
+    </div>
+    <div class="pv-wrap" id="pv-wrap"><img id="pv-img" alt=""></div>
+    <div class="pv-meta"><b id="pv-day">1-КҮН</b><span class="muted" id="pv-date">—</span></div>
+    <div class="btn-row">
+      <button class="btn" id="pv-prev">
+        <svg class="i" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+        Алдыңғы
+      </button>
+      <button class="btn" id="pv-next">
+        Келесі
+        <svg class="i" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ САЛЫСТЫРУ ============ -->
+<div class="ov" id="ov-cmp">
+  <div>
+    <div class="r-top">
+      <button class="icon-btn" id="cm-close" aria-label="Жабу">
+        <svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="r-ttl"><div>Салыстыру</div></div>
+      <span class="label" id="cm-type">Алдынан</span>
+    </div>
+
+    <div class="cmp" id="cmp-box">
+      <img id="cmp-a" alt="">
+      <div class="cmp-new" id="cmp-new"><img id="cmp-b" alt=""></div>
+      <span class="cmp-tag t-a" id="cmp-ta">БҰРЫН</span>
+      <span class="cmp-tag t-b" id="cmp-tb">КЕЙІН</span>
+      <div class="cmp-h" id="cmp-handle"><em>‹›</em></div>
+    </div>
+    <div class="cmp-lab" id="cmp-lab">—</div>
+
+    <button class="btn" id="cmp-quick" style="margin-bottom:18px">
+      <svg class="i" viewBox="0 0 24 24"><path d="M4 9h16l-3-3"/><path d="M20 15H4l3 3"/></svg>
+      Бірінші ↔ Соңғы
+    </button>
+
+    <span class="label">Бұрын</span>
+    <div class="strip" id="cmp-strip-a"></div>
+    <span class="label">Кейін</span>
+    <div class="strip" id="cmp-strip-b"></div>
+
+    <button class="btn primary" id="cmp-make" style="margin-top:8px">
+      <svg class="i" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M8 8 12 4l4 4"/><path d="M5 19h14"/></svg>
+      СУРЕТ ЖАСАУ
+    </button>
+    <p class="label" style="text-align:center;margin-top:14px">Сурет тек телефонға жүктеледі</p>
+  </div>
+</div>
+
+<input type="file" id="ph-file" accept="image/*" capture="environment" style="display:none">
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* =========================================================================
+   FitDay — барлық логика. Магиялық сандар CFG ішінде жиналған.
+   ========================================================================= */
+const CFG = {
+  STORE_KEY: 'fitday.v1',    // кілт сол күйінде — ескі дерек көшіріліп алынады
+  SPEAK_FROM: 3,             // соңғы неше секундты дауыстап санау
+  FREEZE_PER_WEEK: 1,        // аптасына берілетін «кешірім» саны
+  WEEK_LEN: 7,
+  RING_R: 52,                // таймер шеңберінің радиусы
+  TOAST_MS: 2600,
+  SKELETON_MS: 420,
+  SWIPE_X: 60, SWIPE_Y: 45,  // свайп табалдырығы
+  VIB_TAP: 25, VIB_OK: [40, 40, 70],
+  BEEP_HZ: 880, BEEP_HI: 1320, BEEP_MS: 120,
+  MATH_MIN: 11, MATH_MAX: 49,
+  TABS: ['home', 'alarm', 'body', 'face']
+};
+
+/* ---------- 30 күндік бағдарламаның ережелері (барлық формула осында) ---------- */
+const PRG = {
+  DAYS: 30,                  // бағдарламаның ұзақтығы
+  WEEK: 7,                   // аптадағы күн
+  REST_DAYS: [7, 14, 21, 28],// демалыс күндері
+  STEP: 0.045,               // әр күн ~4.5% ауырлайды
+  CYCLE_BOOST: 1.3,          // 2-айналымда база 1.3 есе өседі
+  REST_START: 30,            // 1-күнгі демалыс (сек)
+  REST_DROP: 0.5,            // әр күн азаятын секунд
+  REST_MIN: 15,              // ең қысқа демалыс
+  SEC_PER_REP: 3,            // ұзақтықты шамалау үшін
+  BODY_COUNT: [8, 10, 12, 14, 14],   // аптадағы жаттығу саны
+  BODY_POOL: [14, 16, 18, 20, 20],   // ашық жаттығулар саны
+  FACE_COUNT: [6, 6, 7, 7, 7],       // бетте жүктеме сет пен секундпен өседі
+  FACE_POOL: [8, 10, 12, 14, 14],
+  FACE_SETS: [2, 2, 3, 3, 3],        // аптадағы сет саны
+  FACE_BASE: 20,             // бет жаттығуының бастапқы ұзақтығы
+  FACE_ADD: 2,               // әр күн +2 сек
+  FACE_MAX: 60,              // бір жаттығудың шегі
+  FACE_REST: 10,             // бет жаттығуларының арасы
+  REST_DAY_SEC: 50,          // демалыс күнгі бір созылу
+  REST_DAY_N: 3,             // демалыс күнгі жаттығу саны
+  KCAL: { body: 6, face: 2 } // минутына ккал (шамамен)
+};
+/* Бұлшықет топтары — күндік жиынтық осылардан теңдей алынады */
+const GROUPS = ['аяқ', 'іш', 'кеуде-қол', 'арқа', 'бүкіл дене', 'созылу'];
+
+const WDAY = ['Жс', 'Дс', 'Сс', 'Ср', 'Бс', 'Жм', 'Сн'];
+const WDAY_FULL = ['Жексенбі', 'Дүйсенбі', 'Сейсенбі', 'Сәрсенбі', 'Бейсенбі', 'Жұма', 'Сенбі'];
+const MONTH = ['қаңтар', 'ақпан', 'наурыз', 'сәуір', 'мамыр', 'маусым',
+  'шілде', 'тамыз', 'қыркүйек', 'қазан', 'қараша', 'желтоқсан'];
+const NUM_KK = ['нөл', 'бір', 'екі', 'үш', 'төрт', 'бес', 'алты', 'жеті', 'сегіз', 'тоғыз', 'он'];
+
+/* ---------- Қысқа көмекшілер ---------- */
+const $ = (sel, root) => (root || document).querySelector(sel);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+const pad2 = (n) => String(n).padStart(2, '0');
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+/* Күн кілті: 2026-08-09 */
+function dayKey(d) {
+  const x = d || new Date();
+  return x.getFullYear() + '-' + pad2(x.getMonth() + 1) + '-' + pad2(x.getDate());
+}
+/* n күн бұрынғы/кейінгі күн */
+function shiftDay(base, n) {
+  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  d.setDate(d.getDate() + n);
+  return d;
+}
+/* Апта кілті — freeze беруді бақылау үшін */
+function weekKey(d) {
+  const mon = shiftDay(d, -((d.getDay() + 6) % 7));
+  return dayKey(mon);
+}
+function hhmm(d) { return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function mmss(sec) { return pad2(Math.floor(sec / 60)) + ':' + pad2(sec % 60); }
+
+/* ---------- Бастапқы күй ---------- */
+function emptyProgram() {
+  return { currentDay: 1, completed: [], startedAt: '', cycle: 1 };
+}
+function emptyState() {
+  return {
+    v: 2,
+    onboarded: false,
+    profile: { age: '', goal: '', level: '' },
+    body: emptyProgram(),             // «30 күнде форма»
+    face: emptyProgram(),             // «30 күнде бет сопақшасы»
+    history: [],                      // { date, program, day, minutes, kcal }
+    streak: { count: 0, lastDate: '', freezes: CFG.FREEZE_PER_WEEK, freezeWeek: '' },
+    days: {},                         // { '2026-08-09': {alarm,body,face,min,kcal} }
+    best: 0,
+    totalMin: 0,
+    photoSeen: '',                    // баннер жабылған күн
+    settings: { sound: true, vibro: true, voice: true, notif: false, photo: true,
+      rtime: '08:00' },
+    alarm: { time: '07:00', days: [1, 2, 3, 4, 5], on: false, math: true, lastFire: '',
+      sound: 'classic', peak: 1, ramp: 'normal', vibro: true }
+  };
+}
+
+let S = emptyState();          // қосымшаның күйі
+let installEvt = null;         // PWA орнату оқиғасы
+
+/* ---------- localStorage: оқу / жазу (қателерді өңдеумен) ---------- */
+function loadState() {
+  try {
+    const raw = localStorage.getItem(CFG.STORE_KEY);
+    if (!raw) return emptyState();
+    return mergeState(emptyState(), JSON.parse(raw));
+  } catch (e) {
+    toast('Сақталған дерек бүлінген — жаңадан бастаймыз.');
+    return emptyState();
+  }
+}
+/* Ескі нұсқадан келген деректі жаңа құрылыммен біріктіру */
+function mergeState(base, saved) {
+  if (!saved || typeof saved !== 'object') return base;
+  const out = Object.assign({}, base, saved);
+  out.profile = Object.assign({}, base.profile, saved.profile);
+  out.settings = Object.assign({}, base.settings, saved.settings);
+  out.alarm = Object.assign({}, base.alarm, saved.alarm);
+  out.streak = Object.assign({}, base.streak, saved.streak);
+  out.body = Object.assign({}, base.body, saved.body);
+  out.face = Object.assign({}, base.face, saved.face);
+  out.days = (saved.days && typeof saved.days === 'object') ? saved.days : {};
+  out.history = Array.isArray(saved.history) ? saved.history : [];
+  return (saved.v === 2) ? out : migrateV1(out, saved);
+}
+/* v1 → v2: ескі күндер тізімінен бағдарлама прогресі мен тарихын құру */
+function migrateV1(out, saved) {
+  const keys = Object.keys(out.days).sort();
+  keys.forEach((k) => {
+    const rec = out.days[k] || {};
+    ['body', 'face'].forEach((p) => {
+      if (!rec[p]) return;
+      const day = out[p].completed.length + 1;
+      if (day > PRG.DAYS) return;
+      out[p].completed.push(day);
+      out[p].currentDay = Math.min(day + 1, PRG.DAYS);
+      out[p].startedAt = out[p].startedAt || k;
+      out.history.push({ date: k, program: p, day: day,
+        minutes: Math.round((rec.min || 0) / 2), kcal: Math.round((rec.kcal || 0) / 2) });
+    });
+  });
+  out.streak.freezes = ('freezes' in saved) ? saved.freezes : CFG.FREEZE_PER_WEEK;
+  out.streak.freezeWeek = saved.freezeWeek || '';
+  out.streak.count = calcStreakFromDays(out.days);
+  out.streak.lastDate = keys.length ? keys[keys.length - 1] : '';
+  out.v = 2;
+  return out;
+}
+function saveState() {
+  try {
+    localStorage.setItem(CFG.STORE_KEY, JSON.stringify(S));
+    return true;
+  } catch (e) {
+    const full = e && (e.name === 'QuotaExceededError' || e.code === 22);
+    toast(full ? 'Жад толы. Ескі деректі экспорттап, нөлдеп көр.'
+               : 'Сақтау мүмкін болмады (браузер тыйым салған).');
+    return false;
+  }
+}
+/* Бүгінгі күн жазбасын алу */
+function today(create) {
+  const k = dayKey();
+  if (!S.days[k] && create) S.days[k] = { alarm: false, body: false, face: false, min: 0, kcal: 0 };
+  return S.days[k] || { alarm: false, body: false, face: false, min: 0, kcal: 0 };
+}
+
+/* ---------- Хабарлама (toast) ---------- */
+let toastTimer = null;
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), CFG.TOAST_MS);
+}
+
+/* ---------- Вибрация (haptic feedback) ---------- */
+function buzz(pattern) {
+  if (!S.settings.vibro || !navigator.vibrate) return;
+  try { navigator.vibrate(pattern || CFG.VIB_TAP); } catch (e) { /* қолдамайды */ }
+}
+
+/* ---------- Web Audio: сигналдар мен оятқыш дыбысы ---------- */
+const Sound = {
+  ctx: null,
+  alarmTimer: null,
+  warned: false,
+
+  /* Аудио контексті тек пайдаланушы әрекетінен кейін ашылады */
+  ready() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) throw new Error('no-audio');
+      if (!this.ctx) this.ctx = new AC();
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      return true;
+    } catch (e) {
+      if (!this.warned) { toast('Браузер дыбысты қолдамайды — вибрация қосылады.'); this.warned = true; }
+      return false;
+    }
+  },
+
+  /* Бір қысқа сигнал */
+  beep(freq, ms, vol) {
+    if (!S.settings.sound || !this.ready()) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq || CFG.BEEP_HZ, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(vol || 0.25, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + (ms || CFG.BEEP_MS) / 1000);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + (ms || CFG.BEEP_MS) / 1000 + 0.02);
+  },
+
+  /* Оятқыш дыбысын AlarmVoice қозғалтқышы басқарады */
+  startAlarm() { AlarmVoice.start(S.alarm.sound, false); },
+  stopAlarm() { AlarmVoice.stop(); }
+};
+
+/* =========================================================================
+   ОЯТҚЫШ ДЫБЫСЫ — 6 нұсқа, бәрі Web Audio арқылы генерацияланады.
+   Файл жоқ. Жаңа дауыс қосу үшін VOICES-ке жол қосып, createAlarmSound
+   ішіндегі switch-ке бір тармақ жазсаң жеткілікті.
+   ========================================================================= */
+const ALARM = {
+  ATTACK: 0.005,             // атака 5 мс — дыбыс бірден шығады
+  JIT_F: 0.03,               // жиілік ±3%
+  JIT_R: 0.05,               // ритм ±5%
+  STAGES: [[0, 0.35], [15, 0.6], [40, 0.85], [90, 1]],   // [секунд, деңгей]
+  STRONG_SEC: 90,            // осыдан кейін вибрация күшейеді
+  CYCLE_MS: 180000,          // 3 минут
+  PAUSE_MS: 10000,           // содан кейін 10 сек үзіліс
+  PREVIEW_MS: 4000,
+  PREVIEW_VOL: 0.35,
+  RAMP: { slow: 0.6, normal: 1, fast: 1.7 },
+  DAWN_FROM: 0.2, DAWN_TO: 0.7, DAWN_SEC: 60
+};
+const VOICES = [
+  { id: 'classic', name: 'КЛАССИКА', power: 4,
+    desc: 'Ескі оятқыштың өткір қос үні' },
+  { id: 'siren', name: 'СИРЕНА', power: 5,
+    desc: 'Үздіксіз көтеріліп-түсетін сирена' },
+  { id: 'industrial', name: 'ДАБЫЛ', power: 5,
+    desc: 'Әдейі жағымсыз, жыртылған дыбыс — қатты' },
+  { id: 'drip', name: 'ТАМШЫ', power: 3,
+    desc: 'Болжауға келмейтін тамшы — есті оятады' },
+  { id: 'dawn', name: 'ТАҢ', power: 1,
+    desc: 'Жұмсақ арпеджио — тек жеңіл ұйқыға' },
+  { id: 'random', name: 'КЕЗДЕЙСОҚ', power: 4,
+    desc: 'Күн сайын басқа дыбыс — ми үйренбейді' }
+];
+const RANDOM_POOL = ['classic', 'siren', 'industrial', 'drip'];
+const DAWN_NOTES = [523, 659, 784, 1047];
+
+function jitF(hz) { return hz * (1 + (Math.random() * 2 - 1) * ALARM.JIT_F); }
+function jitR(ms) { return Math.round(ms * (1 + (Math.random() * 2 - 1) * ALARM.JIT_R)); }
+function actx() { return Sound.ctx; }
+
+/* «Кездейсоқ» нұсқа: күнге байланған, бірақ болжауға келмейтін таңдау */
+function resolveVoice(id) {
+  if (id !== 'random') return id;
+  const key = dayKey();
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 9973;
+  return RANDOM_POOL[h % RANDOM_POOL.length];
+}
+/* Бір тон: атака 5 мс, соңында қысқа сөну */
+function tone(o) {
+  const ctx = actx();
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  const end = o.at + o.dur / 1000;
+  osc.type = o.wave;
+  osc.frequency.setValueAtTime(o.hz, o.at);
+  g.gain.setValueAtTime(0.0001, o.at);
+  g.gain.linearRampToValueAtTime(o.vol, o.at + ALARM.ATTACK);
+  g.gain.setValueAtTime(o.vol, end);
+  g.gain.linearRampToValueAtTime(0.0001, end + 0.02);
+  osc.connect(g).connect(o.dest || AlarmVoice.master);
+  osc.start(o.at);
+  osc.stop(end + 0.04);
+  AlarmVoice.track(osc, g);
+  return osc;
+}
+/* Дисторсия қисығы — «жыртылған» дыбыс үшін */
+function distortionCurve(amount) {
+  const n = 256, curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = i * 2 / n - 1;
+    curve[i] = (1 + amount) * x / (1 + amount * Math.abs(x));
+  }
+  return curve;
+}
+
+/* ---------- Бір цикл дыбыс: { next: келесіге дейінгі мс, vib: [...] } ---------- */
+function createAlarmSound(type) {
+  switch (type) {
+    case 'siren': return voiceSiren();
+    case 'industrial': return voiceIndustrial();
+    case 'drip': return voiceDrip();
+    case 'dawn': return voiceDawn();
+    default: return voiceClassic();
+  }
+}
+/* 1) КЛАССИКА: 2800/3200 Гц кезектесіп, 4 соққыдан кейін үзіліс */
+function voiceClassic() {
+  const t = actx().currentTime;
+  const on = jitR(120), off = jitR(80), gap = jitR(300);
+  const dest = AlarmVoice.chain;
+  let at = t;
+  for (let i = 0; i < 4; i++) {
+    tone({ wave: 'square', hz: jitF(i % 2 ? 3200 : 2800), at: at, dur: on, vol: 0.5, dest: dest });
+    at += (on + off) / 1000;
+  }
+  return { next: (on + off) * 4 + gap, vib: [on, off, on, off, on, off, on, gap] };
+}
+/* 2) СИРЕНА: 800→2400→800, екінші осциллятор 3 Гц-ке ығысқан (beating) */
+function voiceSiren() {
+  const ctx = actx(), t = ctx.currentTime;
+  const dur = jitR(1400) / 1000;
+  const lo = jitF(800), hi = jitF(2400);
+  [0, 3].forEach((shift) => sweep(lo + shift, hi + shift, t, dur));
+  return { next: Math.round(dur * 1000), vib: [Math.round(dur * 1000)] };
+}
+function sweep(lo, hi, t, dur) {
+  const ctx = actx();
+  const osc = ctx.createOscillator(), g = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(lo, t);
+  osc.frequency.linearRampToValueAtTime(hi, t + dur / 2);
+  osc.frequency.linearRampToValueAtTime(lo, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.3, t + ALARM.ATTACK);
+  g.gain.setValueAtTime(0.3, t + dur - 0.03);
+  g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g).connect(AlarmVoice.chain);
+  osc.start(t); osc.stop(t + dur + 0.02);
+  AlarmVoice.track(osc, g);
+}
+/* 3) ДАБЫЛ: 440 Гц square + 1760 Гц saw, дисторсиямен, тынымсыз */
+function voiceIndustrial() {
+  const t = actx().currentTime;
+  const on = jitR(90), off = jitR(60);
+  const dest = AlarmVoice.chain;
+  const vib = [];
+  let at = t;
+  for (let i = 0; i < 6; i++) {
+    tone({ wave: 'square', hz: jitF(440), at: at, dur: on, vol: 0.36, dest: dest });
+    tone({ wave: 'sawtooth', hz: jitF(1760), at: at, dur: on, vol: 0.26, dest: dest });
+    at += (on + off) / 1000;
+    vib.push(on, off);
+  }
+  return { next: (on + off) * 6, vib: vib };
+}
+/* 4) ТАМШЫ: 1200 Гц, аралығы кездейсоқ әрі уақыт өте қысқарады */
+function voiceDrip() {
+  const t = actx().currentTime;
+  tone({ wave: 'triangle', hz: jitF(1200), at: t, dur: 60, vol: 0.5, dest: AlarmVoice.chain });
+  return { next: dripGap(), vib: [60] };
+}
+function dripGap() {
+  const k = Math.min(AlarmVoice.elapsed(), ALARM.STRONG_SEC) / ALARM.STRONG_SEC;
+  const min = Math.round(400 - 200 * k);
+  const max = Math.round(900 - 640 * k);
+  return min + Math.floor(Math.random() * Math.max(1, max - min));
+}
+/* 5) ТАҢ: көтерілетін арпеджио + қысқа реверб */
+function voiceDawn() {
+  const t = actx().currentTime;
+  let at = t;
+  DAWN_NOTES.forEach((hz) => {
+    tone({ wave: 'sine', hz: jitF(hz), at: at, dur: 250, vol: 0.5, dest: AlarmVoice.chain });
+    at += 0.25;
+  });
+  return { next: jitR(1000) + 400, vib: [150] };
+}
+
+/* ---------- Қозғалтқыш ---------- */
+const AlarmVoice = {
+  master: null, chain: null, nodes: [], type: 'classic',
+  running: false, preview: false, timer: null, previewTimer: null,
+  t0: 0, cycleAt: 0,
+
+  /* iOS: контекст пайдаланушы әрекетінсіз ашылмайды — Sound.ready() басқанда шақырылады */
+  start(id, isPreview) {
+    if (!Sound.ready()) return false;
+    this.stop();
+    this.type = resolveVoice(id || 'classic');
+    this.preview = !!isPreview;
+    this.master = actx().createGain();
+    this.master.gain.value = 0.0001;
+    this.master.connect(actx().destination);
+    this.chain = this.buildChain(this.type);
+    this.running = true;
+    this.t0 = Date.now();
+    this.cycleAt = Date.now();
+    this.loop();
+    if (isPreview) this.previewTimer = setTimeout(() => this.stop(), ALARM.PREVIEW_MS);
+    return true;
+  },
+  /* Дауысқа тән өңдеу тізбегі (бір рет құрылады) */
+  buildChain(type) {
+    const ctx = actx();
+    if (type === 'classic') {
+      const f = ctx.createBiquadFilter();
+      f.type = 'highpass'; f.frequency.value = 1500;
+      f.connect(this.master);
+      return f;
+    }
+    if (type === 'industrial') {
+      const ws = ctx.createWaveShaper();
+      ws.curve = distortionCurve(28); ws.oversample = '2x';
+      ws.connect(this.master);
+      return ws;
+    }
+    if (type === 'dawn') return this.buildReverb();
+    return this.master;
+  },
+  buildReverb() {
+    const ctx = actx();
+    const input = ctx.createGain();
+    const delay = ctx.createDelay(0.5);
+    const fb = ctx.createGain();
+    delay.delayTime.value = 0.18;
+    fb.gain.value = 0.3;
+    input.connect(this.master);
+    input.connect(delay);
+    delay.connect(fb); fb.connect(delay);
+    delay.connect(this.master);
+    return input;
+  },
+  loop() {
+    if (!this.running) return;
+    if (!this.preview && Date.now() - this.cycleAt >= ALARM.CYCLE_MS) return this.takeBreak();
+    this.master.gain.setTargetAtTime(this.level(), actx().currentTime, 0.05);
+    const cycle = createAlarmSound(this.type);
+    this.buzz(cycle.vib);
+    this.timer = setTimeout(() => this.loop(), cycle.next);
+  },
+  /* 3 минуттан кейін тоқтамайды — тек 10 секунд үзіліс жасайды */
+  takeBreak() {
+    this.silence();
+    this.timer = setTimeout(() => { this.cycleAt = Date.now(); this.loop(); }, ALARM.PAUSE_MS);
+  },
+  elapsed() { return (Date.now() - this.t0) / 1000; },
+  /* Деңгей: уақыт өте өседі, «күшею жылдамдығы» мен шыңға бағынады */
+  level() {
+    if (this.preview) return ALARM.PREVIEW_VOL;
+    const peak = S.alarm.peak || 1;
+    const el = this.elapsed() * (ALARM.RAMP[S.alarm.ramp] || 1);
+    if (this.type === 'dawn') {
+      const k = Math.min(el, ALARM.DAWN_SEC) / ALARM.DAWN_SEC;
+      return peak * (ALARM.DAWN_FROM + (ALARM.DAWN_TO - ALARM.DAWN_FROM) * k);
+    }
+    let v = ALARM.STAGES[0][1];
+    ALARM.STAGES.forEach((s) => { if (el >= s[0]) v = s[1]; });
+    return peak * v;
+  },
+  /* Вибрация ритмі дыбыс ритмімен сәйкес келеді */
+  buzz(pattern) {
+    if (this.preview || !S.alarm.vibro || !navigator.vibrate || !pattern) return;
+    const strong = this.elapsed() >= ALARM.STRONG_SEC;
+    const pat = strong ? pattern.map((v, i) => (i % 2 ? v : Math.round(v * 1.6))) : pattern;
+    try { navigator.vibrate(pat); } catch (e) { /* қолдамайды */ }
+  },
+  track(osc, gain) {
+    this.nodes.push(osc);
+    osc.onended = () => {
+      this.nodes = this.nodes.filter((n) => n !== osc);
+      try { osc.disconnect(); if (gain) gain.disconnect(); } catch (e) { /* өшкен */ }
+    };
+  },
+  /* Барлық осцилляторды дереу тоқтату (жады ағып кетпесін) */
+  silence() {
+    this.nodes.forEach((n) => { try { n.stop(); n.disconnect(); } catch (e) { /* өшкен */ } });
+    this.nodes = [];
+    if (navigator.vibrate) { try { navigator.vibrate(0); } catch (e) { /* қолдамайды */ } }
+  },
+  stop() {
+    this.running = false;
+    clearTimeout(this.timer); clearTimeout(this.previewTimer);
+    this.timer = null; this.previewTimer = null;
+    this.silence();
+    try {
+      if (this.chain && this.chain !== this.master) this.chain.disconnect();
+      if (this.master) this.master.disconnect();
+    } catch (e) { /* өшкен */ }
+    this.chain = null; this.master = null;
+  }
+};
+
+/* ---------- SpeechSynthesis: қазақша дауыстық сүйемелдеу ---------- */
+const Voice = {
+  pick: null,
+  ok: ('speechSynthesis' in window),
+
+  /* Ең қолайлы дауысты таңдау: kk → ru → әдепкі */
+  choose() {
+    if (!this.ok) return;
+    const list = window.speechSynthesis.getVoices() || [];
+    this.pick = list.find((v) => /^kk/i.test(v.lang))
+      || list.find((v) => /^ru/i.test(v.lang))
+      || list.find((v) => /^tr/i.test(v.lang)) || null;
+  },
+
+  say(text) {
+    if (!this.ok || !S.settings.voice || !text) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      if (this.pick) { u.voice = this.pick; u.lang = this.pick.lang; } else { u.lang = 'kk-KZ'; }
+      u.rate = 1; u.pitch = 1; u.volume = 1;
+      window.speechSynthesis.speak(u);
+    } catch (e) { /* дауыс жоқ — үнсіз жалғастырамыз */ }
+  },
+
+  /* Санды қазақша айту (0–10 сөзбен) */
+  count(n) { this.say(NUM_KK[n] || String(n)); },
+  stop() { if (this.ok) { try { window.speechSynthesis.cancel(); } catch (e) {} } }
+};
+/* =========================================================================
+   1) ДЕНЕ ЖАТТЫҒУЛАРЫ — қалыптар (poses) мен нұсқаулықтар
+   Қалып = адам фигурасының буындары: hd бас, nk мойын, hp жамбас,
+   kL/kR тізе, fL/fR табан, eL/eR шынтақ, hL/hR қол.
+   Әр жаттығуда 2 қалып бар — SVG солардың арасында үздіксіз қозғалады.
+   ========================================================================= */
+const STAND = { hd: [60, 18], nk: [60, 32], hp: [60, 64], kL: [52, 86], fL: [50, 110],
+  kR: [68, 86], fR: [70, 110], eL: [47, 46], hL: [43, 62], eR: [73, 46], hR: [77, 62] };
+const PLANK = { hd: [24, 58], nk: [36, 62], hp: [72, 68], kL: [88, 72], fL: [106, 78],
+  kR: [88, 74], fR: [106, 80], eL: [34, 78], hL: [26, 90], eR: [36, 78], hR: [28, 90] };
+const PUSH = { hd: [24, 54], nk: [36, 58], hp: [72, 66], kL: [88, 72], fL: [106, 80],
+  kR: [88, 74], fR: [106, 82], eL: [36, 74], hL: [36, 90], eR: [38, 74], hR: [38, 90] };
+const LIE = { hd: [24, 80], nk: [36, 82], hp: [72, 84], kL: [92, 84], fL: [108, 86],
+  kR: [92, 86], fR: [108, 88], eL: [46, 88], hL: [58, 90], eR: [46, 90], hR: [58, 92] };
+const PRONE = { hd: [26, 76], nk: [38, 78], hp: [74, 82], kL: [90, 84], fL: [106, 86],
+  kR: [90, 86], fR: [106, 88], eL: [26, 80], hL: [14, 82], eR: [26, 82], hR: [14, 84] };
+const QUAD = { hd: [28, 50], nk: [40, 54], hp: [76, 58], kL: [78, 80], fL: [92, 90],
+  kR: [78, 82], fR: [92, 92], eL: [42, 74], hL: [42, 92], eR: [44, 76], hR: [44, 92] };
+const REVSIT = { hd: [46, 40], nk: [50, 50], hp: [64, 70], kL: [86, 72], fL: [98, 92],
+  kR: [86, 74], fR: [98, 94], eL: [40, 62], hL: [34, 88], eR: [42, 64], hR: [36, 90] };
+const WALL = { hd: [72, 34], nk: [72, 46], hp: [72, 74], kL: [42, 74], fL: [42, 102],
+  kR: [44, 76], fR: [44, 104], eL: [62, 58], hL: [52, 68], eR: [64, 60], hR: [54, 70] };
+const SIDEP = { hd: [26, 42], nk: [36, 48], hp: [72, 70], kL: [92, 82], fL: [106, 92],
+  kR: [92, 84], fR: [106, 94], eL: [32, 66], hL: [28, 90], eR: [40, 34], hR: [44, 16] };
+
+/* Базалық қалыпты бірнеше буынмен өзгерту */
+function P(base, over) { return Object.assign({}, base, over || {}); }
+
+const BODY = [
+  {
+    id: 'squat', name: 'Сквот (отырып-тұру)', say: 'Сквот',
+    type: 'reps', base: 10, group: 'аяқ',
+    tip: 'Аяқты иық кеңдігінде қой, ұштарын сәл сыртқа бұр. Арқаң түзу, кеудең тік — жамбасты артқа сала отыр. Түсерде дем ал, көтерілерде дем шығар.',
+    err: 'Қате: тізе ішке қарай құлайды және өкше еденнен көтеріледі. Салмақ өкшеде тұрсын.',
+    short: 'Тізе ішке құламасын, өкше еденде',
+    ok: [P(STAND, { eL: [46, 44], hL: [34, 44], eR: [74, 44], hR: [86, 44] }),
+      { hd: [60, 34], nk: [60, 48], hp: [60, 76], kL: [48, 90], fL: [48, 110], kR: [72, 90],
+        fR: [72, 110], eL: [46, 58], hL: [34, 58], eR: [74, 58], hR: [86, 58] }],
+    bad: [P(STAND, { eL: [46, 44], hL: [34, 44], eR: [74, 44], hR: [86, 44] }),
+      { hd: [62, 42], nk: [59, 54], hp: [63, 78], kL: [57, 90], fL: [46, 110], kR: [65, 90],
+        fR: [74, 110], eL: [48, 62], hL: [40, 72], eR: [74, 62], hR: [82, 72] }]
+  },
+  {
+    id: 'pushup', name: 'Отжимание (қолтіреу)', say: 'Отжимание',
+    type: 'reps', base: 6, group: 'кеуде-қол',
+    tip: 'Алақан иықтан сәл кең, шынтақ денеге 45° бұрышпен жақын. Дене басынан өкшесіне дейін бір түзу сызық. Түсерде дем ал, итерерде дем шығар.',
+    err: 'Қате: жамбас салбырап, бел майысады. Ауыр болса тізеге тіреліп жаса.',
+    short: 'Жамбас салбырамасын',
+    ok: [PUSH, { hd: [24, 66], nk: [36, 70], hp: [72, 76], kL: [88, 80], fL: [106, 86],
+      kR: [88, 82], fR: [106, 88], eL: [28, 80], hL: [36, 90], eR: [30, 82], hR: [38, 90] }],
+    bad: [P(PUSH, { hp: [72, 84] }), P(PUSH, { hd: [22, 70], nk: [36, 74], hp: [72, 88],
+      eL: [30, 82], eR: [32, 84] })]
+  },
+  {
+    id: 'plank', name: 'Планка', say: 'Планка',
+    type: 'time', base: 20, group: 'іш',
+    tip: 'Шынтақ иықтың дәл астында, алақан алға қарайды. Пресс пен бөксені қатты ұста, мойын арқаның жалғасы. Тыныс алуды тоқтатпа — біркелкі тыныста.',
+    err: 'Қате: жамбас түсіп кетеді немесе тым жоғары көтеріледі. Дене түзу тақтай болсын.',
+    short: 'Дене түзу тақтай болсын',
+    ok: [PLANK, P(PLANK, { hp: [72, 66], nk: [36, 61] })],
+    bad: [P(PLANK, { hp: [72, 84] }), P(PLANK, { hp: [72, 50] })]
+  },
+  {
+    id: 'bridge', name: 'Көпір (жамбас көтеру)', say: 'Көпір',
+    type: 'reps', base: 12, group: 'аяқ',
+    tip: 'Шалқаңнан жат, тізені бүк, табан жамбасқа жақын. Өкшеге тіреліп жамбасты көтер, бөксені қыс. Көтерерде дем шығар, түсерде дем ал.',
+    err: 'Қате: белді шамадан тыс майыстыру. Күш белден емес, бөксе бұлшықетінен шығуы керек.',
+    short: 'Белді шамадан тыс майыстырма',
+    ok: [P(LIE, { kL: [92, 66], fL: [98, 90], kR: [92, 68], fR: [98, 92] }),
+      P(LIE, { hp: [72, 62], kL: [92, 60], fL: [98, 90], kR: [92, 62], fR: [98, 92] })],
+    bad: [P(LIE, { kL: [92, 66], fL: [98, 90], kR: [92, 68], fR: [98, 92] }),
+      P(LIE, { hd: [24, 72], nk: [36, 78], hp: [72, 48], kL: [92, 56], fL: [98, 90],
+        kR: [92, 58], fR: [98, 92] })]
+  },
+  {
+    id: 'lunge', name: 'Выпад (алға адым)', say: 'Выпад',
+    type: 'reps', base: 8, group: 'аяқ',
+    tip: 'Бір аяқпен алға үлкен адым жаса, екі тізені де 90°-қа бүк. Дене тік, қол жамбаста. Түсерде дем ал, тұрарда дем шығар.',
+    err: 'Қате: алдыңғы тізе аяқ ұшынан асып кетеді. Тізе табанның үстінде тұрсын.',
+    short: 'Тізе аяқ ұшынан аспасын',
+    ok: [P(STAND, { eL: [50, 52], hL: [54, 62], eR: [70, 52], hR: [66, 62] }),
+      { hd: [60, 26], nk: [60, 40], hp: [60, 70], kL: [40, 88], fL: [38, 110], kR: [80, 94],
+        fR: [88, 110], eL: [50, 58], hL: [54, 68], eR: [70, 58], hR: [66, 68] }],
+    bad: [P(STAND, { eL: [50, 52], hL: [54, 62], eR: [70, 52], hR: [66, 62] }),
+      { hd: [52, 34], nk: [54, 46], hp: [58, 72], kL: [32, 92], fL: [44, 110], kR: [78, 96],
+        fR: [86, 110], eL: [48, 60], hL: [46, 70], eR: [68, 60], hR: [64, 70] }]
+  },
+  {
+    id: 'jump', name: 'Секіру (қол-аяқ жазу)', say: 'Секіру',
+    type: 'time', base: 25, group: 'бүкіл дене',
+    tip: 'Аяқты жанға секіріп ашып, қолды бас үстінде қос. Жеңіл, серпімді секір — табан жұмсақ түссін. Тыныс алуды жиілет, бірақ ұстама.',
+    err: 'Қате: тізені бүкпей, өкшемен «тарс» түсу. Буынға ауыр соққы болады.',
+    short: 'Тізені бүгіп, жұмсақ түс',
+    ok: [{ hd: [60, 18], nk: [60, 32], hp: [60, 64], kL: [57, 86], fL: [56, 110], kR: [63, 86],
+      fR: [64, 110], eL: [52, 46], hL: [50, 62], eR: [68, 46], hR: [70, 62] },
+    { hd: [60, 18], nk: [60, 32], hp: [60, 64], kL: [46, 86], fL: [38, 110], kR: [74, 86],
+      fR: [82, 110], eL: [42, 34], hL: [36, 16], eR: [78, 34], hR: [84, 16] }],
+    bad: [{ hd: [60, 18], nk: [60, 32], hp: [60, 64], kL: [57, 86], fL: [56, 110], kR: [63, 86],
+      fR: [64, 110], eL: [52, 46], hL: [50, 62], eR: [68, 46], hR: [70, 62] },
+    { hd: [60, 18], nk: [60, 32], hp: [60, 64], kL: [50, 88], fL: [46, 110], kR: [70, 88],
+      fR: [74, 110], eL: [46, 42], hL: [42, 34], eR: [74, 42], hR: [78, 34] }]
+  },
+  {
+    id: 'crunch', name: 'Пресс (бүктелу)', say: 'Пресс',
+    type: 'reps', base: 12, group: 'іш',
+    tip: 'Шалқаңнан жат, тізе бүгулі, қол шекеде — бірақ тартпайды. Иықты еденнен көтеріп, кеудені жамбасқа жақындат. Көтерерде дем шығар.',
+    err: 'Қате: қолмен басты алға тарту. Мойын емес, іш бұлшықеті жұмыс істесін.',
+    short: 'Мойынды қолмен тартпа',
+    ok: [P(LIE, { kL: [92, 66], fL: [98, 90], kR: [92, 68], fR: [98, 92], eL: [36, 72],
+      hL: [30, 76], eR: [36, 74], hR: [30, 78] }),
+    P(LIE, { hd: [32, 68], nk: [44, 76], kL: [92, 66], fL: [98, 90], kR: [92, 68], fR: [98, 92],
+      eL: [42, 66], hL: [36, 70], eR: [42, 68], hR: [36, 72] })],
+    bad: [P(LIE, { kL: [92, 66], fL: [98, 90], kR: [92, 68], fR: [98, 92], eL: [36, 72],
+      hL: [30, 76], eR: [36, 74], hR: [30, 78] }),
+    P(LIE, { hd: [40, 78], nk: [48, 80], kL: [92, 66], fL: [98, 90], kR: [92, 68], fR: [98, 92],
+      eL: [44, 72], hL: [40, 76], eR: [44, 74], hR: [40, 78] })]
+  },
+  {
+    id: 'superman', name: 'Супермен (арқа)', say: 'Супермен',
+    type: 'reps', base: 10, group: 'арқа',
+    tip: 'Етпетіңнен жат, қолды алға соз. Қол мен аяқты бір мезгілде еденнен көтер, 2 секунд ұста. Көтерерде дем шығар, түсерде дем ал.',
+    err: 'Қате: тек басты жоғары шалқайту. Мойын емес, арқа мен бөксе жұмыс істеуі керек.',
+    short: 'Басты шалқайтпа',
+    ok: [PRONE, { hd: [24, 66], nk: [38, 72], hp: [74, 80], kL: [90, 78], fL: [106, 68],
+      kR: [90, 80], fR: [106, 70], eL: [24, 68], hL: [12, 60], eR: [24, 70], hR: [12, 62] }],
+    bad: [PRONE, P(PRONE, { hd: [22, 56], nk: [38, 70], eL: [26, 78], hL: [14, 80] })]
+  },
+  {
+    id: 'legraise', name: 'Аяқ көтеру', say: 'Аяқ көтеру',
+    type: 'reps', base: 8, group: 'іш',
+    tip: 'Шалқаңнан жат, қолды бүйірге қой, бел еденге жабысып тұрсын. Түзу аяқты баяу көтеріп, баяу түсір. Көтерерде дем шығар.',
+    err: 'Қате: бел еденнен көтеріліп, тізе бүгіледі. Ауыр болса тізені сәл бүгіп, амплитуданы қысқарт.',
+    short: 'Бел еденге жабысып тұрсын',
+    ok: [LIE, P(LIE, { kL: [86, 64], fL: [92, 44], kR: [88, 66], fR: [94, 46] })],
+    bad: [LIE, P(LIE, { nk: [36, 78], hp: [72, 74], kL: [86, 70], fL: [78, 58], kR: [88, 72],
+      fR: [80, 60] })]
+  },
+  {
+    id: 'mountain', name: 'Альпинист', say: 'Альпинист',
+    type: 'time', base: 20, group: 'бүкіл дене',
+    tip: 'Жоғарғы планка қалпында тұр, алақан иықтың астында. Тізені кезекпен кеудеге тарт, қарқынды бірақ бақылаумен. Тыныс алу жиі, біркелкі.',
+    err: 'Қате: жамбас жоғары шығып кетеді. Иық пен өкше бір деңгейде қалсын.',
+    short: 'Жамбас жоғары шықпасын',
+    ok: [PUSH, P(PUSH, { kL: [62, 80], fL: [54, 88], hp: [72, 64] })],
+    bad: [P(PUSH, { hp: [72, 48], nk: [36, 62] }), P(PUSH, { hp: [72, 44], nk: [36, 64],
+      kL: [84, 66], fL: [100, 76] })]
+  },
+  {
+    id: 'calf', name: 'Балтыр көтеру', say: 'Балтыр',
+    type: 'reps', base: 15, group: 'аяқ',
+    tip: 'Тік тұр, өкшені баяу көтеріп, аяқ ұшында 1 секунд ұста. Баяу түсір — секірме. Көтерерде дем шығар.',
+    err: 'Қате: денені алға еңкейтіп, жартылай амплитудамен жасау. Тепе-теңдік үшін қабырғаға сүйен.',
+    short: 'Алға еңкейме, тік тұр',
+    ok: [STAND, { hd: [60, 12], nk: [60, 26], hp: [60, 58], kL: [52, 80], fL: [50, 104],
+      kR: [68, 80], fR: [70, 104], eL: [47, 40], hL: [43, 56], eR: [73, 40], hR: [77, 56] }],
+    bad: [STAND, P(STAND, { hd: [54, 16], nk: [57, 30], hp: [63, 60], kL: [54, 84],
+      fL: [50, 108], kR: [70, 84], fR: [70, 108] })]
+  },
+  {
+    id: 'stretch', name: 'Созылу (алға еңкею)', say: 'Созылу',
+    type: 'time', base: 20, group: 'созылу',
+    tip: 'Қолды жоғары соз, содан кейін жамбастан еңкейіп, қолды аяққа қарай түсір. Созылуды 20–30 секунд ұста, серпілме. Терең әрі баяу дем ал.',
+    err: 'Қате: арқаны дөңгелетіп, секіріп созылу. Тізені сәл бүгіп, арқаны түзу ұста.',
+    short: 'Арқаң домаланбасын',
+    ok: [P(STAND, { eL: [48, 32], hL: [46, 14], eR: [72, 32], hR: [74, 14] }),
+      { hd: [60, 54], nk: [60, 60], hp: [60, 70], kL: [54, 88], fL: [52, 110], kR: [66, 88],
+        fR: [68, 110], eL: [54, 76], hL: [52, 94], eR: [66, 76], hR: [68, 94] }],
+    bad: [P(STAND, { eL: [48, 32], hL: [46, 14], eR: [72, 32], hR: [74, 14] }),
+      { hd: [52, 62], nk: [57, 62], hp: [63, 68], kL: [54, 88], fL: [52, 110], kR: [66, 88],
+        fR: [68, 110], eL: [52, 78], hL: [48, 96], eR: [64, 78], hR: [60, 96] }]
+  },
+  {
+    id: 'armcircle', name: 'Қол айналдыру', say: 'Қол айналдыру',
+    type: 'reps', base: 15, group: 'кеуде-қол',
+    tip: 'Тік тұрып, қолды жанға көлденең соз. Алдымен кішкене шеңбер жаса, содан соң кеңейт. Арқа түзу, іш жиналған күйде тұрсын.',
+    err: 'Қате: иықты құлаққа көтеріп, мойынға күш түсіру. Иық түсулі, тек қол жұмыс істейді.',
+    short: 'Иықты құлаққа көтерме',
+    ok: [P(STAND, { eL: [44, 46], hL: [28, 42], eR: [76, 46], hR: [92, 42] }),
+      P(STAND, { eL: [44, 42], hL: [28, 54], eR: [76, 42], hR: [92, 54] })],
+    bad: [P(STAND, { nk: [60, 34], eL: [46, 40], hL: [32, 30], eR: [74, 40], hR: [88, 30] }),
+      P(STAND, { hd: [60, 22], nk: [60, 36], eL: [46, 36], hL: [32, 24], eR: [74, 36],
+        hR: [88, 24] })]
+  },
+  {
+    id: 'birddog', name: 'Құс-ит (қарама-қарсы қол-аяқ)', say: 'Құс ит',
+    type: 'reps', base: 8, group: 'арқа',
+    tip: 'Төрттағандап тұр: алақан иықтың, тізе жамбастың астында. Бір қолды алға, қарама-қарсы аяқты артқа соз. 2 секунд ұстап, ауыстыр.',
+    err: 'Қате: бел майысып, жамбас бір жағына бұрылып кетеді. Арқада стакан тұрғандай тегіс ұста.',
+    short: 'Жамбас бұрылмасын',
+    ok: [QUAD, P(QUAD, { eL: [30, 68], hL: [12, 60], kR: [92, 60], fR: [108, 52] })],
+    bad: [QUAD, P(QUAD, { hd: [28, 38], hp: [76, 48], eL: [30, 62], hL: [12, 48],
+      kR: [92, 44], fR: [108, 34] })]
+  },
+  {
+    id: 'sideplank', name: 'Бүйір планка', say: 'Бүйір планка',
+    type: 'time', base: 15, group: 'іш',
+    tip: 'Шынтақ иықтың дәл астында, дене басынан табанға дейін бір түзу сызық. Жамбасты жоғары ұстап, бүйір бұлшықетін қыс. Тыныс алуды тоқтатпа.',
+    err: 'Қате: жамбас еденге қарай салбырайды немесе кеуде алға аударылады.',
+    short: 'Жамбас салбырамасын',
+    ok: [SIDEP, P(SIDEP, { hp: [72, 64], nk: [36, 46] })],
+    bad: [P(SIDEP, { hp: [72, 84] }), P(SIDEP, { hp: [72, 88], nk: [36, 54] })]
+  },
+  {
+    id: 'wallsit', name: 'Қабырғаға отыру', say: 'Қабырғаға отыру',
+    type: 'time', base: 20, group: 'аяқ',
+    tip: 'Арқаңды қабырғаға толық тіре, тізені 90°-қа бүк. Сан еденге параллель, салмақ өкшеде. Біркелкі дем ал, тізені ішке жинама.',
+    err: 'Қате: тізе аяқ ұшынан асып кетеді, арқа қабырғадан ажырайды.',
+    short: 'Арқа қабырғада, тізе 90°',
+    ok: [WALL, P(WALL, { hL: [52, 66], hR: [54, 68] })],
+    bad: [P(WALL, { hp: [70, 64], kL: [46, 70], kR: [48, 72] }),
+      P(WALL, { hd: [68, 30], nk: [68, 44], hp: [68, 60], kL: [48, 68], kR: [50, 70] })]
+  },
+  {
+    id: 'dips', name: 'Кері тіреу (трицепс)', say: 'Кері тіреу',
+    type: 'reps', base: 8, group: 'кеуде-қол',
+    tip: 'Қолды артқа тіреп отыр, саусақ денеге қарасын. Шынтақты артқа бүгіп, жамбасты еденге жақындат. Иықты құлаққа көтерме.',
+    err: 'Қате: шынтақ жанға жайылып, жамбас қолдан тым алыс кетеді — иыққа артық күш түседі.',
+    short: 'Шынтақ артқа, иық түсулі',
+    ok: [REVSIT, P(REVSIT, { hd: [46, 50], nk: [50, 60], hp: [64, 82], eL: [38, 74],
+      eR: [40, 76] })],
+    bad: [P(REVSIT, { hp: [74, 74] }), P(REVSIT, { hp: [80, 84], eL: [30, 70], eR: [32, 72] })]
+  },
+  {
+    id: 'catcow', name: 'Мысық-сиыр (арқа созылу)', say: 'Мысық сиыр',
+    type: 'reps', base: 8, group: 'созылу',
+    tip: 'Төрттағандап тұрып, дем шығара арқаны жоғары дөңгелет, иекті кеудеге тарт. Дем ала белді баяу майыстырып, кеудені аш. Баяу әрі тегіс жаса.',
+    err: 'Қате: тек басты шайқау, арқа қозғалмайды. Қозғалыс омыртқаның бойымен жүрсін.',
+    short: 'Қозғалыс арқадан басталсын',
+    ok: [P(QUAD, { hd: [30, 58], nk: [40, 48], hp: [76, 52] }),
+      P(QUAD, { hd: [26, 44], nk: [40, 60], hp: [76, 64] })],
+    bad: [QUAD, P(QUAD, { hd: [26, 42] })]
+  },
+  {
+    id: 'highknees', name: 'Тізе көтеру (орнында)', say: 'Тізе көтеру',
+    type: 'time', base: 20, group: 'бүкіл дене',
+    tip: 'Орнында жүгіргендей, тізені жамбас деңгейіне дейін көтер. Аяқтың ұшына жеңіл түс, дене тік. Қарқынды, бірақ бақылаумен жаса.',
+    err: 'Қате: денені артқа шалқайтып, тізені жартылай ғана көтеру.',
+    short: 'Тізе жамбас деңгейіне шықсын',
+    ok: [P(STAND, { kL: [56, 64], fL: [54, 80], eL: [50, 44], hL: [46, 32], eR: [70, 48],
+      hR: [74, 62] }),
+      P(STAND, { kR: [64, 64], fR: [66, 80], eR: [70, 44], hR: [74, 32], eL: [50, 48],
+        hL: [46, 62] })],
+    bad: [P(STAND, { hd: [62, 22], nk: [61, 34], kL: [54, 80], fL: [52, 98] }),
+      P(STAND, { hd: [64, 24], nk: [62, 36], kR: [66, 80], fR: [68, 98] })]
+  },
+  {
+    id: 'sidestretch', name: 'Бүйір созылу', say: 'Бүйір созылу',
+    type: 'time', base: 20, group: 'созылу',
+    tip: 'Тік тұрып, бір қолды жоғары соз, екіншісін жамбасқа қой. Дем шығара денені баяу жанға еңкейт. Жамбас орнында қалсын, серпілме.',
+    err: 'Қате: алға еңкейіп, жамбасты жанға шығару. Созылу бүйірде сезілуі керек.',
+    short: 'Алға емес, дәл жанға еңкей',
+    ok: [P(STAND, { eL: [48, 30], hL: [46, 12], eR: [70, 52], hR: [64, 62] }),
+      { hd: [54, 22], nk: [56, 34], hp: [60, 64], kL: [52, 86], fL: [50, 110], kR: [68, 86],
+        fR: [70, 110], eL: [46, 26], hL: [38, 14], eR: [66, 54], hR: [62, 64] }],
+    bad: [P(STAND, { eL: [48, 30], hL: [46, 12], eR: [70, 52], hR: [64, 62] }),
+      { hd: [54, 40], nk: [57, 46], hp: [62, 66], kL: [54, 88], fL: [52, 110], kR: [70, 88],
+        fR: [72, 110], eL: [48, 44], hL: [42, 34], eR: [68, 56], hR: [64, 66] }]
+  }
+];
+
+/* Бағдарламаның аты — екеуі бір-біріне тәуелсіз */
+const PROGRAMS = {
+  body: { id: 'body', name: '30 күнде форма', short: 'Дене', tab: 'body' },
+  face: { id: 'face', name: '30 күнде бет сопақшасы', short: 'Бет', tab: 'face' }
+};
+
+/* =========================================================================
+   2) БЕТ ЖАТТЫҒУЛАРЫ (face yoga)
+   anim: mouth [rx,ry] екі күйі, eye көз саңылауы, brow қас жылжуы,
+   hands — қолдың бетке қойылу нүктелері (екі күй).
+   ========================================================================= */
+const FACE = [
+  {
+    id: 'oval', name: 'Бет сопақшасын нығайту', reps: '10 рет × 3 сет',
+    steps: ['Алақанды екі ұрттың төменгі жағына қой.',
+      'Терінің құлақ бағытында жеңіл жоғары көтер.',
+      '«О» әрпін айтқандай ерінді дөңгелет те, 5 секунд ұста.'],
+    why: 'Бет сопақшасының сызығын айқындап, ұрттың салбырауын тежейді.',
+    anim: { mouth: [[10, 5], [6, 10]], eye: [5.5, 5.5], brow: [0, 0],
+      hands: [[[34, 88], [34, 76]], [[86, 88], [86, 76]]] }
+  },
+  {
+    id: 'chin', name: 'Қос иекке қарсы', reps: '15 рет × 2 сет',
+    steps: ['Жұдырықты иектің астына тіре.',
+      'Тілдің ұшын таңдайға басып, аузыңды ашуға тырыс.',
+      'Қолмен қарсылық көрсет, 5 секунд ұстап, босаңсы.'],
+    why: 'Иек астындағы бұлшықетті жинақтап, «қос иекті» азайтады.',
+    anim: { mouth: [[9, 4], [11, 8]], eye: [5.5, 5.5], brow: [0, 0],
+      hands: [[[60, 106], [60, 98]]] }
+  },
+  {
+    id: 'eyes', name: 'Көз айналасы', reps: '20 рет × 2 сет',
+    steps: ['Сұқ саусақты самай тұсына жеңіл қой.',
+      'Көзді қатты жұмбай, тек төменгі қабақпен «жарты жыпылық» жаса.',
+      '20 рет қайтала, содан соң 10 секунд көзді жұмып демал.'],
+    why: 'Көз айналасының қан айналымын жақсартып, ұсақ әжімді азайтады.',
+    anim: { mouth: [[9, 4], [9, 4]], eye: [6, 1.5], brow: [0, 0],
+      hands: [[[24, 52], [21, 50]], [[96, 52], [99, 50]]] }
+  },
+  {
+    id: 'lips', name: 'Ерін контуры', reps: '12 рет × 3 сет',
+    steps: ['Ерінді «сүйгендей» алға созып, 5 секунд ұста.',
+      'Содан кейін кең жымиып, ерінді жанға тарт.',
+      'Тісті көрсетпей, тек ерін бұлшықетімен жұмыс істе.'],
+    why: 'Ерін контурын айқындап, ауыз айналасындағы тік әжімді жазады.',
+    anim: { mouth: [[14, 4], [5, 10]], eye: [5.5, 5.5], brow: [0, 0], hands: [] }
+  },
+  {
+    id: 'forehead', name: 'Маңдай әжімі', reps: '10 рет × 3 сет',
+    steps: ['Алақанды маңдайға көлденең қой, саусақ қасқа жетсін.',
+      'Қасты жоғары көтеруге тырыс, ал қолмен қарсылық жаса.',
+      '5 секунд ұстап, баяу босат.'],
+    why: 'Маңдайдағы көлденең әжімнің тереңдеуін тежейді.',
+    anim: { mouth: [[9, 4], [9, 4]], eye: [5.5, 7.5], brow: [0, -5],
+      hands: [[[44, 30], [44, 26]], [[76, 30], [76, 26]]] }
+  },
+  {
+    id: 'jaw', name: 'Жақ сүйегі', reps: '10 рет × 3 сет',
+    steps: ['Аузыңды баяу кеңінен аш, төменгі жақты алға шығар.',
+      'Ерінді тіске жабыстырып, 5 секунд ұста.',
+      'Баяу жап. Күрт қимылдама.'],
+    why: 'Жақ сызығын айқындап, төменгі беттің тонусын арттырады.',
+    anim: { mouth: [[8, 3], [11, 13]], eye: [5.5, 5.5], brow: [0, 0],
+      hands: [[[30, 82], [30, 86]], [[90, 82], [90, 86]]] }
+  },
+  {
+    id: 'cheek', name: 'Ұрт көтеру', reps: '15 рет × 2 сет',
+    steps: ['Ауызды жауып, ұртты ауамен толтыр.',
+      'Ауаны оң ұрттан сол ұртқа баяу ауыстыр.',
+      'Әр жақта 3 секунд ұстап, 15 рет қайтала.'],
+    why: 'Ұрттың көлемін сақтап, «құлаған» көрінісін болдырмайды.',
+    anim: { mouth: [[8, 4], [8, 4]], eye: [5.5, 5.5], brow: [0, 0], cheek: [[46, 6], [74, 12]],
+      hands: [] }
+  },
+  {
+    id: 'brow', name: 'Қас арасы (түйілу)', reps: '10 рет × 2 сет',
+    steps: ['Екі сұқ саусақты қастың үстіне қой.',
+      'Қабақты түюге тырыс, саусақпен қарсылық көрсет.',
+      '5 секунд ұстап, маңдайды толық босаңсыт.'],
+    why: 'Қас арасындағы тік «ашу сызығын» тегістейді.',
+    anim: { mouth: [[9, 4], [9, 4]], eye: [5.5, 4], brow: [0, 3],
+      hands: [[[46, 42], [46, 40]], [[74, 42], [74, 40]]] }
+  },
+  {
+    id: 'neck', name: 'Мойын мен иек сызығы', reps: '10 рет × 2 сет',
+    steps: ['Алақанды бұғанаға қойып, теріні жеңіл ұста.',
+      'Басты баяу артқа шалқайтып, төменгі ерінді жоғары тарт.',
+      '5 секунд ұстап, басты бастапқы қалпына қайтар.'],
+    why: 'Мойын терісін тартып, иек астының салбырауын азайтады.',
+    anim: { mouth: [[10, 4], [13, 6]], eye: [5.5, 4.5], brow: [0, -2],
+      hands: [[[46, 112], [46, 108]], [[74, 112], [74, 108]]] }
+  },
+  {
+    id: 'relax', name: 'Бет релаксациясы', reps: '1 мин · тыныс алу',
+    steps: ['Көзді жұмып, иықты түсір.',
+      'Мұрынмен 4 санағанша дем ал, 6 санағанша ауызбен шығар.',
+      'Тіс пен қасты толық босаңсыт — бет «ауыр» болып сезілсін.'],
+    why: 'Бет бұлшықетінің шаршауын кетіріп, әжімнің «қатып қалуын» болдырмайды.',
+    anim: { mouth: [[9, 4], [11, 6]], eye: [5.5, 0.6], brow: [0, 1], hands: [] }
+  },
+  {
+    id: 'chew', name: 'Шайнау бұлшықетін босату', reps: '10 рет × 2 сет',
+    steps: ['Саусақты жақтың бұрышына — құлақтың алдына қой.',
+      'Тісті жеңіл қысып, бұлшықеттің қатқанын сез, содан соң толық босат.',
+      'Жақ босаған күйде дөңгелете 10 рет уқала.'],
+    why: 'Түнде тіс қысудан қатқан шайнау бұлшықетін жұмсартып, жақ сызығын жеңілдетеді.',
+    anim: { mouth: [[9, 3], [9, 7]], eye: [5.5, 5.5], brow: [0, 0],
+      hands: [[[30, 74], [30, 80]], [[90, 74], [90, 80]]] }
+  },
+  {
+    id: 'smile', name: 'Жасырын жымию', reps: '15 рет × 2 сет',
+    steps: ['Ерінді жаппай, тек ұрттың жоғарғы бөлігін көтер.',
+      'Тісті көрсетпей, көзбен «жымиюға» тырыс.',
+      '3 секунд ұстап, баяу босат.'],
+    why: 'Ұрттың жоғарғы бұлшықетін оятып, бетке табиғи көтеріңкі кескін береді.',
+    anim: { mouth: [[8, 4], [13, 3]], eye: [5.5, 4], brow: [0, -1], cheek: [[46, 5], [46, 9]],
+      hands: [] }
+  },
+  {
+    id: 'temple', name: 'Самай мен шеке', reps: '12 рет × 2 сет',
+    steps: ['Екі саусақты самайға қойып, теріні жеңіл артқа тарт.',
+      'Сол күйде көзді 12 рет баяу ашып-жұм.',
+      'Соңында 5 секунд ұстап тұрып, қолды босат.'],
+    why: 'Көз бұрышындағы «қарға табанын» тегістеп, көзқарасты ашық етеді.',
+    anim: { mouth: [[9, 4], [9, 4]], eye: [6, 1.5], brow: [0, -2],
+      hands: [[[22, 56], [18, 52]], [[98, 56], [102, 52]]] }
+  },
+  {
+    id: 'tongue', name: 'Тіл тірегі (иек астына)', reps: '10 рет × 3 сет',
+    steps: ['Тілдің ұшын алдыңғы тістің артындағы таңдайға мықтап тіре.',
+      'Басты сәл шалқайтып, иек астының тартылғанын сез.',
+      '5 секунд ұстап, баяу босаңсы.'],
+    why: 'Иек астындағы терең бұлшықетті жинақтап, «қос иекті» азайтады.',
+    anim: { mouth: [[7, 3], [10, 9]], eye: [5.5, 5], brow: [0, -1], hands: [] }
+  }
+];
+
+/* =========================================================================
+   3) SVG АНИМАЦИЯ ГЕНЕРАТОРЛАРЫ
+   ========================================================================= */
+/* Inline SVG иконкалар — эмодзидің орнына. Барлығы 24x24, currentColor. */
+const ICONS = {
+  check: '<path d="M5 12.5 10 17.5 19 6.5"/>',
+  flame: '<path d="M8.5 14.6a2.5 2.5 0 0 0 2.5-2.5c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5Z"/>',
+  right: '<path d="M9.5 5.5 16 12l-6.5 6.5"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/>',
+  repeat: '<path d="M4 11V9.5A3.5 3.5 0 0 1 7.5 6H19"/><path d="M16 3l3 3-3 3"/>' +
+    '<path d="M20 13v1.5a3.5 3.5 0 0 1-3.5 3.5H5"/><path d="M8 21l-3-3 3-3"/>',
+  warn: '<path d="M12 4.5 21 19.5H3L12 4.5Z"/><path d="M12 10.5v3.6"/><path d="M12 17h.01"/>',
+  play: '<path d="M8 5.5 19 12 8 18.5Z"/>',
+  pause: '<path d="M9.5 5v14M14.5 5v14"/>',
+  user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/>',
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.8"/>',
+  gauge: '<path d="M4 16.5a8.5 8.5 0 1 1 16 0"/><path d="M12 16.5 16.5 10"/>',
+  lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/>' +
+    '<path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>',
+  refresh: '<path d="M20 5.5v5h-5"/><path d="M19.4 10.5a7.5 7.5 0 1 0-.7 6"/>'
+};
+function ico(name, cls) {
+  return '<svg class="i ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' +
+    (ICONS[name] || '') + '</svg>';
+}
+
+/* Буын тізбектері: иық → шынтақ → алақан, жамбас → тізе → табан */
+const CHAINS = [['shL', 'eL', 'hL'], ['shR', 'eR', 'hR'],
+  ['hpL', 'kL', 'fL'], ['hpR', 'kR', 'fR']];
+const FIG = { head: 8.5, chest: 9, hip: 7 };
+const SVG_DUR = '2s';
+const SPLINE = '0.42 0 0.58 1';   // жұмсақ қисық — қалып ауысқанда секірмейді
+
+function attrStr(o) { return Object.keys(o).map((k) => k + '="' + o[k] + '"').join(' '); }
+function pt(p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }
+
+/* Бір атрибутты A → B → A бойынша үздіксіз анимациялау */
+function animTag(name, a, b, dur) {
+  return '<animate attributeName="' + name + '" values="' + a + ';' + b + ';' + a +
+    '" dur="' + (dur || SVG_DUR) + '" calcMode="spline" keyTimes="0;0.5;1"' +
+    ' keySplines="' + SPLINE + ';' + SPLINE + '" repeatCount="indefinite"/>';
+}
+/* Анимацияланатын SVG элементі */
+function animEl(tag, base, moves, dur) {
+  let inner = '';
+  Object.keys(moves || {}).forEach((k) => { inner += animTag(k, moves[k][0], moves[k][1], dur); });
+  return '<' + tag + ' ' + attrStr(base) + '>' + inner + '</' + tag + '>';
+}
+/* Мойын осіне перпендикуляр бағыт — иық пен жамбас енін табу үшін */
+function perpDir(a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy) || 1;
+  return [-dy / len, dx / len];
+}
+function shift(p, n, d) { return [p[0] + n[0] * d, p[1] + n[1] * d]; }
+
+/* Қалыптың тірек нүктелері: екі иық пен екі жамбас */
+function frame(P) {
+  const n = perpDir(P.nk, P.hp);
+  return { shL: shift(P.nk, n, FIG.chest), shR: shift(P.nk, n, -FIG.chest),
+    hpL: shift(P.hp, n, FIG.hip), hpR: shift(P.hp, n, -FIG.hip) };
+}
+/* Кеуде мен жамбас — біріктірілген тұтас пішін */
+function torsoPath(P) {
+  const f = frame(P);
+  return 'M' + pt(f.shL) + 'L' + pt(f.shR) + 'L' + pt(f.hpR) + 'L' + pt(f.hpL) + 'Z';
+}
+function joint(P, f, k) { return f[k] || P[k]; }
+
+/* Екі қалып арасында жүретін бір сүйек (буын сызығы) */
+function bone(a1, a2, b1, b2, cls) {
+  return animEl('line', { class: cls, x1: a1[0], y1: a1[1], x2: a2[0], y2: a2[1] },
+    { x1: [a1[0], b1[0]], y1: [a1[1], b1[1]], x2: [a2[0], b2[0]], y2: [a2[1], b2[1]] });
+}
+function bones(A, B, cls) {
+  const fa = frame(A), fb = frame(B);
+  let s = bone(A.hd, A.nk, B.hd, B.nk, cls);          // мойын
+  CHAINS.forEach((ch) => {
+    for (let i = 0; i < ch.length - 1; i++) {
+      s += bone(joint(A, fa, ch[i]), joint(A, fa, ch[i + 1]),
+        joint(B, fb, ch[i]), joint(B, fb, ch[i + 1]), cls);
+    }
+  });
+  return s;
+}
+/* Дене силуэті: бас + кеуде/жамбас пішіні + аяқ-қол */
+function figureBody(pair, cls) {
+  const A = pair[0], B = pair[1];
+  let s = animEl('circle', { class: cls + ' solid', cx: A.hd[0], cy: A.hd[1], r: FIG.head },
+    { cx: [A.hd[0], B.hd[0]], cy: [A.hd[1], B.hd[1]] });
+  s += animEl('path', { class: cls + ' solid', d: torsoPath(A) },
+    { d: [torsoPath(A), torsoPath(B)] });
+  return s + bones(A, B, cls);
+}
+/* Дұрыс қалып — толық, қате қалып — «елес» болып үстіне қабаттасады */
+function exerciseVisual(ex) {
+  return '<div class="fig"><svg viewBox="0 0 120 120" aria-hidden="true">' +
+    '<g class="ghost">' + figureBody(ex.bad, 'bad') + '</g>' +
+    figureBody(ex.ok, 'ok') + '</svg>' +
+    '<div class="flab"><span><i></i>Дұрыс</span><span class="bad"><i></i>Қате</span></div>' +
+    '<div class="fnote"><em></em>' + (ex.short || ex.err) + '</div></div>';
+}
+
+/* Бет жаттығуы: жіңішке контур, қол — лайм нүкте, бағыт — жебе */
+function faceSVG(cfg, size) {
+  let s = '<ellipse class="f-line" cx="60" cy="62" rx="31" ry="39"/>';
+  s += faceEyes(cfg) + faceBrows(cfg) + faceMouth(cfg) + faceCheeks(cfg) +
+    faceHands(cfg) + faceArrows(cfg);
+  return '<svg viewBox="0 0 120 128" width="' + (size || '100%') + '" aria-hidden="true">' +
+    s + '</svg>';
+}
+function faceEyes(cfg) {
+  const e = cfg.eye || [5.5, 5.5];
+  return [48, 72].map((x) => animEl('ellipse',
+    { class: 'f-eye', cx: x, cy: 56, rx: 4.6, ry: e[0] }, { ry: [e[0], e[1]] })).join('');
+}
+function faceBrows(cfg) {
+  const b = cfg.brow || [0, 0];
+  return [[40, 44, 54, 41], [66, 41, 80, 44]].map((p) => animEl('line',
+    { class: 'f-dim', x1: p[0], y1: p[1], x2: p[2], y2: p[3] },
+    { y1: [p[1], p[1] + b[1]], y2: [p[3], p[3] + b[1]] })).join('');
+}
+function faceMouth(cfg) {
+  const m = cfg.mouth || [[9, 4], [9, 4]];
+  return animEl('ellipse', { class: 'f-mouth', cx: 60, cy: 86, rx: m[0][0], ry: m[0][1] },
+    { rx: [m[0][0], m[1][0]], ry: [m[0][1], m[1][1]] });
+}
+function faceCheeks(cfg) {
+  if (!cfg.cheek) return '';
+  const a = cfg.cheek[0], b = cfg.cheek[1];
+  return animEl('circle', { class: 'f-cheek', cx: a[0], cy: 72, r: a[1] },
+    { cx: [a[0], b[0]], r: [a[1], b[1]] });
+}
+/* Қол қоятын нүкте — лайм дөңгелек, ол да қозғалады */
+function faceHands(cfg) {
+  return (cfg.hands || []).map((h) =>
+    animEl('circle', { class: 'f-halo', cx: h[0][0], cy: h[0][1], r: 8 },
+      { cx: [h[0][0], h[1][0]], cy: [h[0][1], h[1][1]] }) +
+    animEl('circle', { class: 'f-hand', cx: h[0][0], cy: h[0][1], r: 3.4 },
+      { cx: [h[0][0], h[1][0]], cy: [h[0][1], h[1][1]] })).join('');
+}
+/* Қозғалыс бағытын көрсететін жебе */
+function faceArrows(cfg) {
+  return (cfg.hands || []).map((h) => arrowPath(h[0], h[1])).join('');
+}
+function arrowPath(a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+  if (len < 2.5) return '';
+  const u = [dx / len, dy / len];
+  const tip = shift(b, u, 9), back = shift(tip, u, -4.5);
+  const n = [-u[1], u[0]];
+  return '<path class="f-arrow" d="M' + pt(shift(a, u, 9)) + 'L' + pt(tip) +
+    'M' + pt(shift(back, n, 3.2)) + 'L' + pt(tip) + 'L' + pt(shift(back, n, -3.2)) + '"/>';
+}
+/* =========================================================================
+   4) 30 КҮНДІК БАҒДАРЛАМА: апта, күн, жүктеме формуласы
+   ========================================================================= */
+/* Күн қай аптаға жатады (1..5). 29–30-күн соңғы «финал» аптасы. */
+function weekOf(day) { return Math.min(Math.ceil(day / PRG.WEEK), PRG.BODY_COUNT.length); }
+function isRestDay(day) { return PRG.REST_DAYS.indexOf(day) >= 0; }
+function weekName(w) { return w + '-АПТА'; }
+
+/* Қиындық коэффициенті: әр күн +4.5%, әр айналым +30% */
+function dayFactor(day, cycle) {
+  const grow = 1 + (day - 1) * PRG.STEP;
+  return grow * Math.pow(PRG.CYCLE_BOOST, Math.max(0, (cycle || 1) - 1));
+}
+/* Жаттығулар арасындағы демалыс: күн өткен сайын қысқарады */
+function restSec(day) {
+  return Math.round(Math.max(PRG.REST_START - (day - 1) * PRG.REST_DROP, PRG.REST_MIN));
+}
+/* Бет жаттығуының ұзақтығы: 20 сек + әр күн 2 сек, шегі 60 */
+function faceSec(ex, day) {
+  return Math.min((ex.base || PRG.FACE_BASE) + (day - 1) * PRG.FACE_ADD, PRG.FACE_MAX);
+}
+/* Осы аптада ашылған жаттығулар тізімі */
+function unlocked(program, day) {
+  const list = (program === 'face') ? FACE : BODY;
+  const pool = (program === 'face') ? PRG.FACE_POOL : PRG.BODY_POOL;
+  return list.slice(0, pool[weekOf(day) - 1]);
+}
+/* Осы аптада жаңа ашылған жаттығу ма? («ЖАҢА» белгісі үшін) */
+function isNewThisWeek(program, day, ex) {
+  const w = weekOf(day);
+  if (w < 2) return false;
+  const pool = (program === 'face') ? PRG.FACE_POOL : PRG.BODY_POOL;
+  const list = (program === 'face') ? FACE : BODY;
+  const i = list.indexOf(ex);
+  return i >= pool[w - 2] && i < pool[w - 1];
+}
+/* Топтар бойынша кезекпен таңдау — бір күні тек аяқ болып қалмасын */
+function pickBalanced(pool, count, seed) {
+  const buckets = GROUPS.map((g) => pool.filter((e) => e.group === g)).filter((b) => b.length);
+  const out = [];
+  let step = 0;
+  while (out.length < count && step < count * GROUPS.length + PRG.DAYS) {
+    const b = buckets[(seed + step) % buckets.length];
+    const item = b[(seed + Math.floor(step / buckets.length)) % b.length];
+    if (out.indexOf(item) < 0) out.push(item);
+    step++;
+  }
+  return out;
+}
+/* Созылу әрқашан соңында тұрсын */
+function stretchLast(list) {
+  return list.filter((e) => e.group !== 'созылу').concat(list.filter((e) => e.group === 'созылу'));
+}
+
+/* ---------- Күндік жоспар ---------- */
+/* Жоспар = { day, rest, items:[{ex,type,reps|sec,set,sets,isNew}] } */
+function dayPlan(program, day) {
+  if (isRestDay(day)) return restDayPlan(program, day);
+  return (program === 'face') ? facePlan(day) : bodyPlan(day);
+}
+function bodyPlan(day) {
+  const cycle = S.body.cycle || 1;
+  const pool = unlocked('body', day);
+  const count = PRG.BODY_COUNT[weekOf(day) - 1];
+  const items = stretchLast(pickBalanced(pool, count, day - 1)).map((ex) => {
+    const val = Math.round(ex.base * dayFactor(day, cycle));
+    return { ex: ex, type: ex.type, reps: val, sec: val, set: 1, sets: 1,
+      isNew: isNewThisWeek('body', day, ex) };
+  });
+  return { program: 'body', day: day, rest: restSec(day), items: items,
+    exCount: items.length };
+}
+function facePlan(day) {
+  const pool = unlocked('face', day);
+  const count = PRG.FACE_COUNT[weekOf(day) - 1];
+  const sets = PRG.FACE_SETS[weekOf(day) - 1];
+  const picked = pickBalanced2(pool, count, day - 1);
+  const items = [];
+  picked.forEach((ex) => {
+    for (let s = 1; s <= sets; s++) {
+      items.push({ ex: ex, type: 'time', sec: faceSec(ex, day), set: s, sets: sets,
+        isNew: isNewThisWeek('face', day, ex) });
+    }
+  });
+  return { program: 'face', day: day, rest: PRG.FACE_REST, items: items,
+    exCount: picked.length };
+}
+/* Бет жаттығуларында топ жоқ — жай ғана күн бойынша жылжытып аламыз */
+function pickBalanced2(pool, count, seed) {
+  const out = [];
+  for (let i = 0; i < count && i < pool.length; i++) out.push(pool[(seed + i) % pool.length]);
+  return out;
+}
+/* Демалыс күні: тек созылу / релаксация, 3 минут */
+function restDayPlan(program, day) {
+  const ids = (program === 'face') ? ['relax', 'neck', 'oval'] : ['catcow', 'stretch', 'sidestretch'];
+  const src = (program === 'face') ? FACE : BODY;
+  const items = ids.map((id) => src.filter((e) => e.id === id)[0])
+    .filter(Boolean).slice(0, PRG.REST_DAY_N)
+    .map((ex) => ({ ex: ex, type: 'time', sec: PRG.REST_DAY_SEC, set: 1, sets: 1, isNew: false }));
+  return { program: program, day: day, rest: PRG.REST_MIN, items: items,
+    exCount: items.length, isRest: true };
+}
+/* Жоспардың шамамен ұзақтығы (сек) */
+function planSeconds(plan) {
+  const work = plan.items.reduce((a, it) =>
+    a + (it.type === 'reps' ? it.reps * PRG.SEC_PER_REP : it.sec), 0);
+  return work + plan.rest * Math.max(0, plan.items.length - 1);
+}
+function planMinutes(plan) { return Math.max(1, Math.round(planSeconds(plan) / 60)); }
+
+/* ---------- Күннің күйі ---------- */
+/* 'done' | 'today' | 'lock' — тек кезектегі күнді жасауға болады */
+function dayStatus(program, day) {
+  const p = S[program];
+  if (p.completed.indexOf(day) >= 0) return 'done';
+  return (day === p.currentDay) ? 'today' : 'lock';
+}
+/* Бүгін осы бағдарлама бойынша бір күн жасалып қойды ма? */
+function didToday(program) { return !!(S.days[dayKey()] || {})[program]; }
+/* Бағдарлама толық аяқталды ма? */
+function isProgramDone(program) { return S[program].completed.length >= PRG.DAYS; }
+
+/* ---------- Streak ---------- */
+function isDayDone(rec) { return !!(rec && (rec.body || rec.face)); }
+function totalDays() { return Object.keys(S.days).filter((k) => isDayDone(S.days[k])).length; }
+
+/* Аптасына бір рет «кешірім күнін» (freeze) беру */
+function grantFreeze() {
+  const wk = weekKey(new Date());
+  if (S.streak.freezeWeek === wk) return;
+  S.streak.freezeWeek = wk;
+  S.streak.freezes = CFG.FREEZE_PER_WEEK;
+}
+/* Күндер картасынан қатарынан жасалған күндерді санау */
+function calcStreakFromDays(days) {
+  let n = 0, gaps = 0, i = 0;
+  const base = new Date();
+  if (!isDayDone(days[dayKey(base)])) i = 1;      // бүгін әлі жасамаса — кешеден
+  for (; i < 400; i++) {
+    const rec = days[dayKey(shiftDay(base, -i))];
+    if (isDayDone(rec)) { n++; continue; }
+    if (gaps < CFG.FREEZE_PER_WEEK && n > 0) { gaps++; continue; }   // «1 күн кешірім»
+    break;
+  }
+  return n;
+}
+function calcStreak() {
+  let gaps = 0, n = 0, i = 0;
+  const base = new Date();
+  if (!isDayDone(S.days[dayKey(base)])) i = 1;
+  for (; i < 400; i++) {
+    const rec = S.days[dayKey(shiftDay(base, -i))];
+    if (isDayDone(rec)) { n++; continue; }
+    if (gaps < S.streak.freezes && n > 0) { gaps++; continue; }
+    break;
+  }
+  return { days: n, usedFreeze: gaps };
+}
+
+/* ---------- Күнді аяқтау ---------- */
+/* Тарихқа жазып, прогресті жылжытады. Қайталауда прогресс өспейді. */
+function completeDay(program, day, minutes, kcal, repeat) {
+  const key = dayKey();
+  const rec = today(true);
+  rec[program] = true;
+  rec.min = (rec.min || 0) + minutes;
+  rec.kcal = (rec.kcal || 0) + kcal;
+  S.totalMin += minutes;
+  S.history.push({ date: key, program: program, day: day, minutes: minutes, kcal: kcal });
+  if (!repeat) advanceProgram(program, day);
+  updateStreak(key);
+  saveState();
+  renderAll();
+  return S.streak.count;
+}
+function advanceProgram(program, day) {
+  const p = S[program];
+  if (p.completed.indexOf(day) < 0) p.completed.push(day);
+  if (!p.startedAt) p.startedAt = dayKey();
+  p.currentDay = Math.min(day + 1, PRG.DAYS);
+}
+function updateStreak(key) {
+  const st = calcStreak();
+  S.streak.count = st.days;
+  S.streak.lastDate = key;
+  if (st.days > S.best) S.best = st.days;
+}
+/* Оятқыш өшірілді — бүгінгі белгі */
+function markAlarmDone() {
+  today(true).alarm = true;
+  saveState();
+  renderAll();
+}
+/* Бағдарламаны нөлден бастау (растаумен шақырылады) */
+function restartProgram(program, boost) {
+  const cycle = boost ? (S[program].cycle || 1) + 1 : 1;
+  S[program] = emptyProgram();
+  S[program].cycle = cycle;
+  S[program].startedAt = dayKey();
+  saveState(); renderAll();
+}
+
+/* =========================================================================
+   5) НАВИГАЦИЯ
+   ========================================================================= */
+let curView = 'home';
+function nav(name) {
+  curView = name;
+  $$('.view').forEach((v) => v.classList.remove('on'));
+  const map = { home: '#v-home', alarm: '#v-alarm', body: '#v-body', face: '#v-face',
+    stats: '#v-stats', set: '#v-set' };
+  const el = $(map[name] || '#v-home');
+  if (el) el.classList.add('on');
+  $$('#tabbar .tab').forEach((t) => t.classList.toggle('on', t.dataset.nav === name));
+  window.scrollTo({ top: 0, behavior: 'instant' in window ? 'auto' : 'auto' });
+  buzz(CFG.VIB_TAP);
+}
+
+/* Свайп арқылы негізгі 4 бөлім арасында ауысу */
+function initSwipe() {
+  let x0 = 0, y0 = 0, t0 = 0;
+  const main = $('#main');
+  main.addEventListener('touchstart', (e) => {
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
+  }, { passive: true });
+  main.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - x0;
+    const dy = e.changedTouches[0].clientY - y0;
+    if (Date.now() - t0 > 600) return;
+    if (Math.abs(dx) < CFG.SWIPE_X || Math.abs(dy) > CFG.SWIPE_Y) return;
+    const i = CFG.TABS.indexOf(curView);
+    if (i < 0) return;
+    nav(CFG.TABS[clamp(i + (dx < 0 ? 1 : -1), 0, CFG.TABS.length - 1)]);
+  }, { passive: true });
+}
+
+/* =========================================================================
+   6) БАСТЫ БЕТ
+   ========================================================================= */
+function greetText(h) {
+  if (h >= 5 && h < 12) return 'Қайырлы таң!';
+  if (h >= 12 && h < 18) return 'Қайырлы күн!';
+  if (h >= 18 && h < 23) return 'Қайырлы кеш!';
+  return 'Қайырлы түн!';
+}
+function renderHome() {
+  const now = new Date();
+  const rec = today(false);
+  $('#h-date').textContent = now.getDate() + ' ' + MONTH[now.getMonth()] + ', ' +
+    WDAY_FULL[now.getDay()];
+  $('#h-greet').textContent = greetText(now.getHours());
+  renderTasks(rec);
+  renderStreak();
+  renderWeek();
+  renderProgramCards();
+  renderReminder();
+}
+function renderTasks(rec) {
+  const keys = ['alarm', 'body', 'face'];
+  let done = 0;
+  keys.forEach((k) => {
+    const el = $('.task[data-task="' + k + '"]');
+    if (rec[k]) done++;
+    if (el) el.classList.toggle('done', !!rec[k]);
+  });
+  keys.forEach((k) => $('.seg[data-seg="' + k + '"]').classList.toggle('on', !!rec[k]));
+  $('#h-ring-val').textContent = done + '/' + keys.length;
+  $('#h-sub').textContent = done === keys.length
+    ? 'Бүгінгі жоспар толық орындалды!'
+    : 'Бүгін ' + done + '/' + keys.length + ' тапсырма орындалды.';
+}
+/* Басты беттегі екі бағдарлама карточкасы */
+function renderProgramCards() {
+  $('#h-programs').innerHTML = ['body', 'face'].map(programCardHTML).join('');
+  $$('#h-programs .pcard').forEach((c) => c.addEventListener('click', () => {
+    nav(PROGRAMS[c.dataset.prg].tab);
+  }));
+  $$('#h-programs .p-go').forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    tryStartDay(b.dataset.prg, +b.dataset.day, false);
+  }));
+}
+function programCardHTML(program) {
+  const p = S[program];
+  const n = p.completed.length;
+  const done = isProgramDone(program);
+  const can = !didToday(program) && !done;
+  return '<div class="card pcard" data-prg="' + program + '">' +
+    miniRing(n, PRG.DAYS) +
+    '<div class="p-txt"><span class="label">' + PROGRAMS[program].short + '</span>' +
+    '<div class="p-n">' + n + ' <small>/ ' + PRG.DAYS + ' күн</small></div>' +
+    '<span class="t-sub">' + programSub(program, done, can) + '</span></div>' +
+    (can ? '<button class="btn sm primary p-go" data-prg="' + program +
+      '" data-day="' + p.currentDay + '">БАСТА</button>'
+      : '<span class="p-ic">' + ico(done ? 'check' : 'clock') + '</span>') +
+    '</div>';
+}
+function programSub(program, done, can) {
+  if (done) return 'Бағдарлама аяқталды';
+  const day = S[program].currentDay;
+  if (!can) return 'Бүгінгі күн жасалды — ертең жалғас';
+  if (isRestDay(day)) return day + '-күн · демалыс';
+  const plan = dayPlan(program, day);
+  return day + '-күн · ' + plan.exCount + ' жаттығу · ' + planMinutes(plan) + ' мин';
+}
+/* Кішкентай прогресс сақинасы (SVG, r=26) */
+function miniRing(val, total) {
+  const r = 26, c = 2 * Math.PI * r;
+  const off = (c * (1 - clamp(val / total, 0, 1))).toFixed(1);
+  return '<div class="mring"><svg viewBox="0 0 64 64" aria-hidden="true">' +
+    '<circle class="mt" cx="32" cy="32" r="' + r + '"/>' +
+    '<circle class="mv" cx="32" cy="32" r="' + r + '" stroke-dasharray="' + c.toFixed(1) +
+    '" stroke-dashoffset="' + off + '"/></svg>' +
+    '<i>' + Math.round(val / total * 100) + '%</i></div>';
+}
+function renderStreak() {
+  const st = calcStreak();
+  $('#h-streak').textContent = st.days;
+  $('#chip-streak').innerHTML = ico('flame') + '<span>' + st.days + '</span>';
+  $('#h-streak-sub').textContent = st.usedFreeze
+    ? 'Бір күн өткізілді — кешірім қолданылды'
+    : (st.days ? 'Керемет! Тізбекті үзбе.' : 'Бүгін бастасаң — есеп жүреді');
+}
+/* Апталық календарь: жасаған күн жасыл, өткізген сұр */
+function renderWeek() {
+  const now = new Date();
+  const mon = shiftDay(now, -((now.getDay() + 6) % 7));
+  $('#h-week').innerHTML = Array.from({ length: CFG.WEEK_LEN }, (_, i) => {
+    const d = shiftDay(mon, i);
+    const k = dayKey(d);
+    const on = isDayDone(S.days[k]);
+    const isToday = k === dayKey(now);
+    const cls = 'day' + (on ? ' on' : '') + (isToday ? ' today' : '');
+    return '<div class="' + cls + '"><div class="dl">' + WDAY[d.getDay()] + '</div>' +
+      '<div class="dd">' + (on ? ico('check') : d.getDate()) + '</div></div>';
+  }).join('');
+}
+
+/* =========================================================================
+   7) БАҒДАРЛАМА ЭКРАНЫ — 30 күндік тізім (дене де, бет те бірдей)
+   ========================================================================= */
+function renderProgram(program) {
+  const box = $('#p-' + program);
+  box.innerHTML = programHeadHTML(program) + weeksHTML(program) + programFootHTML(program);
+  bindProgram(program, box);
+}
+function renderBody() { renderProgram('body'); }
+function renderFace() { renderProgram('face'); }
+
+/* Жоғарғы блок: сақина, күн саны, пайыз, streak */
+function programHeadHTML(program) {
+  const p = S[program];
+  const n = p.completed.length;
+  const cyc = (p.cycle || 1) > 1 ? ' · ' + p.cycle + '-айналым' : '';
+  return '<div class="card phead">' + miniRing(n, PRG.DAYS) +
+    '<div class="p-txt"><span class="label">' + PROGRAMS[program].name + cyc + '</span>' +
+    '<div class="p-n">' + n + ' <small>/ ' + PRG.DAYS + ' КҮН</small></div>' +
+    '<span class="t-sub">' + headSub(program, n) + '</span></div></div>';
+}
+function headSub(program, n) {
+  if (isProgramDone(program)) return 'Барлық 30 күн жабылды';
+  const left = PRG.DAYS - n;
+  return 'Тағы ' + left + ' күн · streak ' + S.streak.count;
+}
+/* Күндер апталарға бөлінеді, апта тақырыбы жабысып тұрады */
+function weeksHTML(program) {
+  const weeks = Math.ceil(PRG.DAYS / PRG.WEEK);
+  let html = '';
+  for (let w = 1; w <= weeks; w++) {
+    const days = weekDays(w);
+    html += '<div class="wk-h"><span>' + weekName(w) + '</span><span>' +
+      weekMeta(program, w) + '</span></div>';
+    html += days.map((d) => dayRowHTML(program, d)).join('');
+  }
+  return html;
+}
+function weekDays(w) {
+  const out = [];
+  for (let d = (w - 1) * PRG.WEEK + 1; d <= Math.min(w * PRG.WEEK, PRG.DAYS); d++) out.push(d);
+  return out;
+}
+function weekMeta(program, w) {
+  const count = (program === 'face') ? PRG.FACE_COUNT[w - 1] : PRG.BODY_COUNT[w - 1];
+  const sets = (program === 'face') ? ' · ' + PRG.FACE_SETS[w - 1] + ' сет' : '';
+  return count + ' жаттығу' + sets;
+}
+function dayRowHTML(program, day) {
+  const st = dayStatus(program, day);
+  const rest = isRestDay(day);
+  const plan = dayPlan(program, day);
+  const sub = rest ? 'ДЕМАЛЫС · созылу ' + planMinutes(plan) + ' мин'
+    : plan.exCount + ' жаттығу · ' + planMinutes(plan) + ' мин';
+  const canGo = st === 'today' && !didToday(program);
+  return '<div class="drow ' + st + (rest ? ' rest' : '') + '" data-day="' + day + '">' +
+    '<span class="d-ic">' + dayIcon(st, rest) + '</span>' +
+    '<span class="d-txt"><b>' + day + '-КҮН</b><span class="t-sub">' + sub + '</span></span>' +
+    (canGo ? '<button class="btn sm primary d-go">БАСТА</button>' : '') +
+    (st === 'done' ? '<span class="d-rep">' + ico('repeat', 'i-sm') + '</span>' : '') +
+    '</div>';
+}
+function dayIcon(st, rest) {
+  if (st === 'done') return ico('check');
+  if (rest) return ico('moon');
+  return (st === 'today') ? ico('play', 'i-solid') : ico('lock');
+}
+function programFootHTML(program) {
+  return '<button class="btn ghost p-reset" style="margin-top:18px">' +
+    ico('refresh', 'i-sm') + 'Бағдарламаны нөлден бастау</button>';
+}
+function bindProgram(program, box) {
+  $$('.drow', box).forEach((row) => row.addEventListener('click', () => {
+    tryStartDay(program, +row.dataset.day, row.classList.contains('done'));
+  }));
+  $('.p-reset', box).addEventListener('click', () => askRestart(program));
+}
+/* Күнді бастау ережелері: кезекті аттауға болмайды, күніне бір күн */
+function tryStartDay(program, day, repeat) {
+  const st = dayStatus(program, day);
+  if (st === 'lock') return toast('Алдымен ' + S[program].currentDay + '-күнді аяқта.');
+  if (!repeat && didToday(program)) return toast('Бүгінгі күн жасалды. Ертең қайта кел!');
+  buzz();
+  startDay(program, day, st === 'done');
+}
+function askRestart(program) {
+  if (!confirm(PROGRAMS[program].name + ' бағдарламасы 1-күннен басталады. Сенімдісің бе?')) return;
+  restartProgram(program, false);
+  toast('Бағдарлама қайта басталды.');
+}
+
+/* =========================================================================
+   9) СТАТИСТИКА + CANVAS ГРАФИК
+   ========================================================================= */
+function renderStats() {
+  const st = calcStreak();
+  $('#s-total').textContent = totalDays();
+  $('#s-best').textContent = Math.max(S.best, st.days);
+  $('#s-min').textContent = S.totalMin;
+  $('#s-freeze').textContent = S.streak.freezes
+    ? 'Қолжетімді: ' + S.streak.freezes + ' (аптасына ' + CFG.FREEZE_PER_WEEK + ' рет жаңарады)'
+    : 'Бұл аптада қолданылды';
+  drawChart();
+}
+/* Соңғы 7 күндегі минуттар — бағанды график */
+function drawChart() {
+  const cv = $('#chart');
+  const ctx = cv.getContext && cv.getContext('2d');
+  if (!ctx) return;
+  const data = last7();
+  const W = cv.width, H = cv.height, pad = 34;
+  const max = Math.max(10, ...data.map((d) => d.min));
+  ctx.clearRect(0, 0, W, H);
+  drawGrid(ctx, W, H, pad);
+  const bw = (W - pad * 2) / data.length;
+  data.forEach((d, i) => drawBar(ctx, d, i, bw, pad, H, max));
+}
+function last7() {
+  const now = new Date();
+  return Array.from({ length: CFG.WEEK_LEN }, (_, i) => {
+    const d = shiftDay(now, i - (CFG.WEEK_LEN - 1));
+    const rec = S.days[dayKey(d)] || {};
+    return { lab: WDAY[d.getDay()], min: rec.min || 0 };
+  });
+}
+/* Canvas үшін түсті CSS айнымалысынан алу — палитра бір жерде тұрады */
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function drawGrid(ctx, W, H, pad) {
+  ctx.strokeStyle = cssVar('--elevated'); ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i++) {
+    const y = pad + (H - pad * 2) * i / 3;
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad / 2, y); ctx.stroke();
+  }
+}
+function drawBar(ctx, d, i, bw, pad, H, max) {
+  const h = (H - pad * 2) * (d.min / max);
+  const x = pad + i * bw + bw * 0.24, w = bw * 0.52, y = H - pad - h;
+  ctx.fillStyle = d.min ? cssVar('--accent') : cssVar('--elevated');
+  roundRect(ctx, x, d.min ? y : H - pad - 4, w, d.min ? h : 4, 7);
+  ctx.font = '600 17px system-ui'; ctx.textAlign = 'center';
+  ctx.fillStyle = cssVar('--dim');
+  ctx.fillText(d.lab, x + w / 2, H - 10);
+  if (d.min) { ctx.fillStyle = cssVar('--text'); ctx.fillText(d.min, x + w / 2, y - 10); }
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath(); ctx.fill();
+}
+
+/* Барлық бетті жаңарту */
+function renderAll() {
+  renderHome();
+  renderBody();
+  renderFace();
+  renderStats();
+  renderSettings();
+}
+/* =========================================================================
+   10) ЖАТТЫҒУДЫ ОРЫНДАУ РЕЖИМІ (runner)
+   ========================================================================= */
+const RING_C = 2 * Math.PI * CFG.RING_R;
+
+/* Мотивация фразалары — әсірелеусіз */
+const PHRASES = [
+  'Бүгін де келдің. Ең қиыны — сол.',
+  'Нәтиже бір күнде емес, тізбекте.',
+  'Аз болса да, тұрақты — ең дұрысы.',
+  'Дене есте сақтайды. Ертең жеңілірек болады.',
+  'Жасадың. Артық сөздің қажеті жоқ.',
+  'Тағы бір күн — тағы бір саты.',
+  'Ерінген күні де келдің — есептің өзі осы.',
+  'Ешкіммен емес, кешегі өзіңмен жарысасың.',
+  'Бүгінгі 7 минут ертең байқалады.',
+  'Тоқтамасаң — қарқын өздігінен келеді.'
+];
+
+const Run = {
+  steps: [], i: 0, left: 0, total: 0, paused: false, timer: null,
+  program: 'body', day: 1, repeat: false, plan: null, startedAt: 0, wake: null
+};
+
+/* Күнді бастау: жоспардан қадамдар тізбегін құру */
+function startDay(program, day, repeat) {
+  const plan = dayPlan(program, day);
+  Run.program = program; Run.day = day; Run.repeat = !!repeat; Run.plan = plan;
+  Run.steps = buildSteps(plan);
+  Run.startedAt = Date.now();
+  openRunner();
+}
+/* Қадамдар: жұмыс → демалыс → жұмыс ... (соңында демалыс жоқ) */
+function buildSteps(plan) {
+  const steps = [];
+  plan.items.forEach((it, i) => {
+    steps.push({ kind: 'work', it: it, n: i + 1 });
+    if (i < plan.items.length - 1) steps.push({ kind: 'rest', sec: plan.rest, next: i + 1 });
+  });
+  return steps;
+}
+function openRunner() {
+  Run.i = 0; Run.paused = false;
+  $('#run-live').style.display = '';
+  $('#run-done').style.display = 'none';
+  $('#ov-run').classList.add('show');
+  $('#r-arc').setAttribute('stroke-dasharray', RING_C);
+  Sound.ready();
+  keepAwake(true);
+  loadStep();
+  Run.timer = setInterval(tick, 1000);
+}
+/* Экранның сөнбеуін сұрау (қолдаса) */
+function keepAwake(on) {
+  try {
+    if (on && navigator.wakeLock) {
+      navigator.wakeLock.request('screen').then((w) => { Run.wake = w; }).catch(() => {});
+    } else if (Run.wake) { Run.wake.release(); Run.wake = null; }
+  } catch (e) { /* қолдамайды — маңызды емес */ }
+}
+function curStep() { return Run.steps[Run.i]; }
+function workTotal() { return Run.plan.items.length; }
+function workIndex() {
+  const st = curStep();
+  return st.kind === 'work' ? st.n : (st.next + 1);
+}
+/* Ағымдағы қадамды экранға шығару */
+function loadStep() {
+  const st = curStep();
+  if (!st) return finishRun();
+  const rest = st.kind === 'rest';
+  Run.left = rest ? st.sec : (st.it.type === 'time' ? st.it.sec : 0);
+  Run.total = Run.left;
+  $('#ov-run').classList.toggle('rest', rest);
+  $('#ov-run').classList.toggle('reps', !rest && st.it.type === 'reps');
+  $('#r-title').textContent = Run.day + '-КҮН · ' + workIndex() + '/' + workTotal() + ' жаттығу';
+  $('#r-phase').textContent = rest ? 'Демалыс' : 'Жұмыс';
+  if (rest) loadRest(st); else loadWork(st);
+  announce(st, rest);
+  paintTimer();
+}
+function loadWork(st) {
+  const it = st.it;
+  $('#r-name').textContent = it.ex.name + (it.sets > 1 ? ' · ' + it.set + '/' + it.sets + ' сет' : '');
+  $('#r-metric').innerHTML = newBadge(it) + metricText(it);
+  $('#r-visual').innerHTML = stepVisual(it);
+  $('#r-instr').innerHTML = stepInstr(it);
+  $('#r-next').textContent = nextLabel();
+  $('#r-done').innerHTML = (it.type === 'reps')
+    ? 'ДАЙЫН' + ico('right', 'i-sm') : 'ӨТКІЗУ' + ico('right', 'i-sm');
+  $('#r-pause').disabled = (it.type === 'reps');
+}
+function loadRest(st) {
+  const nx = Run.plan.items[st.next];
+  $('#r-name').textContent = 'Демалыс';
+  $('#r-metric').innerHTML = newBadge(nx) + metricText(nx) + ' · КЕЛЕСІ';
+  $('#r-visual').innerHTML = stepVisual(nx);
+  $('#r-instr').innerHTML = '<div class="nxt"><span class="label">Келесі жаттығу</span>' +
+    '<div class="t-name">' + nx.ex.name + '</div>' +
+    '<span class="t-sub">' + nx.ex.tip.split('.')[0] + '.</span></div>';
+  $('#r-next').textContent = 'Терең дем ал, су іш.';
+  $('#r-done').innerHTML = 'ӨТКІЗУ' + ico('right', 'i-sm');
+  $('#r-pause').disabled = false;
+}
+function metricText(it) {
+  if (!it) return '';
+  return (it.type === 'reps') ? it.reps + ' РЕТ' : mmss(it.sec);
+}
+/* Осы аптада ашылған жаттығуға «ЖАҢА» белгісі */
+function newBadge(it) {
+  return (it && it.isNew) ? '<span class="new">ЖАҢА</span>' : '';
+}
+function nextLabel() {
+  const nx = Run.steps[Run.i + 1];
+  if (!nx) return 'Соңғы жаттығу — соңына дейін шыда!';
+  return nx.kind === 'rest' ? 'Келесі: демалыс' : 'Келесі: ' + nx.it.ex.name;
+}
+function stepVisual(it) {
+  if (Run.program === 'face') return '<div class="fig face">' + faceSVG(it.ex.anim) +
+    '<div class="flab"><span><i></i>Осылай жаса</span></div></div>';
+  return exerciseVisual(it.ex);
+}
+function stepInstr(it) {
+  if (Run.program === 'face') return '<ol class="steps">' +
+    it.ex.steps.map((s) => '<li>' + s + '</li>').join('') +
+    '</ol><div class="why"><b>Не үшін пайдалы:</b> ' + it.ex.why + '</div>';
+  return it.ex.tip + '<span class="mis">' + ico('warn', 'i-sm') + '<span>' + it.ex.err +
+    '</span></span>';
+}
+/* Дауыстық сүйемелдеу */
+function announce(st, rest) {
+  Voice.stop();
+  if (rest) { Voice.say('Демал'); return; }
+  const it = st.it;
+  Voice.say(it.ex.say ? it.ex.say : it.ex.name);
+}
+/* Секунд сайынғы соғыс — тек уақытпен өлшенетін қадамдарда */
+function tick() {
+  if (Run.paused || !Run.total) return;
+  Run.left--;
+  if (Run.left <= CFG.SPEAK_FROM && Run.left > 0) {
+    Voice.count(Run.left);
+    Sound.beep(CFG.BEEP_HZ, CFG.BEEP_MS);
+  }
+  if (Run.left <= 0) return nextStep();
+  paintTimer();
+}
+function paintTimer() {
+  const st = curStep();
+  const reps = st && st.kind === 'work' && st.it.type === 'reps';
+  $('#r-sec').textContent = reps ? st.it.reps : Run.left;
+  $('#r-unit').textContent = reps ? 'РЕТ' : 'СЕК';
+  const frac = reps ? 1 : (Run.total ? (Run.left / Run.total) : 0);
+  $('#r-arc').setAttribute('stroke-dashoffset', (RING_C * (1 - frac)).toFixed(1));
+  $('#r-bar').style.width = Math.round(Run.i / Math.max(1, Run.steps.length) * 100) + '%';
+}
+function nextStep() {
+  Sound.beep(CFG.BEEP_HI, 220);
+  buzz(CFG.VIB_OK);
+  Run.i++;
+  if (Run.i >= Run.steps.length) return finishRun();
+  loadStep();
+}
+function prevStep() {
+  if (Run.i <= 0) return;
+  buzz();
+  Run.i--;
+  loadStep();
+}
+function doneStep() { buzz(); nextStep(); }
+function togglePause() {
+  Run.paused = !Run.paused;
+  $('#r-pause').innerHTML = Run.paused
+    ? ico('play', 'i-solid') + 'Жалғастыру' : ico('pause') + 'Пауза';
+  if (Run.paused) Voice.stop();
+  buzz();
+}
+function stopRun(ask) {
+  if (ask && !confirm('Прогресс сақталмайды. Шығасың ба?')) return;
+  clearInterval(Run.timer); Run.timer = null;
+  Voice.stop(); keepAwake(false);
+  $('#ov-run').classList.remove('show');
+}
+/* ---------- Күннің аяқталуы ---------- */
+function finishRun() {
+  clearInterval(Run.timer); Run.timer = null;
+  keepAwake(false);
+  const min = Math.max(1, Math.round((Date.now() - Run.startedAt) / 60000));
+  const kcal = Math.round(min * PRG.KCAL[Run.program]);
+  const streak = completeDay(Run.program, Run.day, min, kcal, Run.repeat);
+  showDone(min, kcal, streak);
+}
+function showDone(min, kcal, streak) {
+  const p = S[Run.program];
+  $('#run-live').style.display = 'none';
+  $('#run-done').style.display = '';
+  $('#d-title').textContent = doneTitle();
+  $('#d-sub').textContent = doneSub();
+  $('#d-stats').textContent = min + ' мин · ' + kcal + ' ккал · ' +
+    Run.plan.exCount + ' жаттығу';
+  $('#d-ring').innerHTML = miniRing(p.completed.length, PRG.DAYS);
+  $('#d-days').textContent = p.completed.length + ' / ' + PRG.DAYS;
+  $('#d-phrase').textContent = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+  $('#d-cycle').style.display = isProgramDone(Run.program) ? 'flex' : 'none';
+  buzz(CFG.VIB_OK);
+  Voice.say('Жарайсың! ' + Run.day + '-күн аяқталды.');
+}
+function doneTitle() {
+  if (isProgramDone(Run.program)) return 'АЯҚТАДЫҢ!';
+  if (Run.day % PRG.WEEK === 0 && !Run.repeat) return weekName(Run.day / PRG.WEEK) + ' АЯҚТАЛДЫ';
+  return Run.day + '-КҮН АЯҚТАЛДЫ';
+}
+function doneSub() {
+  if (isProgramDone(Run.program)) return 'Барлық 30 күн жабылды. 2-айналымға өтуге болады.';
+  if (Run.repeat) return 'Қайталау есептелді, прогресс өзгерген жоқ';
+  if (Run.day % PRG.WEEK === 0) return weekName(Run.day / PRG.WEEK + 1) + ' ашылды';
+  return 'Келесі күн ертең ашылады';
+}
+
+/* =========================================================================
+   11) ОЯТҚЫШ
+   ========================================================================= */
+let mathAnswer = 0;
+
+function renderAlarm() {
+  $('#a-time').value = S.alarm.time;
+  $('#a-on').classList.toggle('on', S.alarm.on);
+  $('#a-math').classList.toggle('on', S.alarm.math);
+  $('#a-state').textContent = S.alarm.on ? alarmSummary() : 'Өшірулі';
+  $('#a-days').innerHTML = WDAY.map((w, i) => {
+    const idx = (i + 1) % 7;                       // Дс-ден басталатын реттілік
+    const on = S.alarm.days.indexOf(idx) >= 0 ? ' on' : '';
+    return '<button class="dbtn' + on + '" data-day="' + idx + '">' + WDAY[idx] + '</button>';
+  }).join('');
+  $$('#a-days .dbtn').forEach((b) => b.addEventListener('click', () => toggleDay(+b.dataset.day)));
+  $('#a-after').style.display = today(false).alarm ? 'block' : 'none';
+  renderSounds();
+}
+/* Дыбыс тізімі + қосымша баптаулар */
+function renderSounds() {
+  $('#a-sounds').innerHTML = VOICES.map(soundRowHTML).join('');
+  $$('#a-sounds .snd').forEach((b) => b.addEventListener('click', () => pickSound(b.dataset.snd)));
+  $$('#a-sounds .snd-p').forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    previewSound(b.dataset.play, b);
+  }));
+  markChips('#a-peak', String(S.alarm.peak));
+  markChips('#a-ramp', S.alarm.ramp);
+  $('#a-vibro').classList.toggle('on', !!S.alarm.vibro);
+}
+function soundRowHTML(v) {
+  const on = (S.alarm.sound === v.id) ? ' on' : '';
+  const warn = (v.id === 'industrial') ? ' warn' : '';
+  return '<button class="snd' + on + warn + '" data-snd="' + v.id + '">' +
+    '<span class="snd-p" data-play="' + v.id + '">' + ico('play', 'i-solid') + '</span>' +
+    '<span class="snd-t"><b>' + v.name + '</b>' +
+    '<span class="t-sub">' + v.desc + '</span></span>' +
+    '<span class="pw">' + powerHTML(v.power) + '</span></button>';
+}
+/* Күштілік индикаторы: 5 баған */
+function powerHTML(n) {
+  let s = '';
+  for (let i = 1; i <= 5; i++) s += '<i' + (i <= n ? ' class="f"' : '') + '></i>';
+  return s;
+}
+function markChips(sel, value) {
+  $$(sel + ' .chip-b').forEach((b) => b.classList.toggle('on', b.dataset.v === value));
+}
+function pickSound(id) {
+  S.alarm.sound = id;
+  Sound.ready();                      // iOS: осы басуды пайдаланып контекстті дайындаймыз
+  saveState(); renderSounds(); buzz();
+}
+/* 4 секунд тыңдату — 35% деңгейде, вибрациясыз */
+function previewSound(id, btn) {
+  $$('#a-sounds .snd-p').forEach((x) => x.classList.remove('playing'));
+  if (!AlarmVoice.start(id, true)) return;
+  btn.classList.add('playing');
+  setTimeout(() => btn.classList.remove('playing'), ALARM.PREVIEW_MS);
+  buzz();
+}
+function alarmSummary() {
+  const d = S.alarm.days.slice().sort();
+  if (!d.length) return 'Күн таңдалмаған';
+  const names = d.map((i) => WDAY[i]).join(', ');
+  return S.alarm.time + ' · ' + names;
+}
+function toggleDay(idx) {
+  const pos = S.alarm.days.indexOf(idx);
+  if (pos >= 0) S.alarm.days.splice(pos, 1); else S.alarm.days.push(idx);
+  saveState(); renderAlarm(); buzz();
+}
+/* Оятқыш уақыты келді ме? (секунд сайын тексеріледі) */
+function checkAlarm(now) {
+  if (!S.alarm.on || $('#ov-ring').classList.contains('show')) return;
+  if (S.alarm.days.indexOf(now.getDay()) < 0) return;
+  if (hhmm(now) !== S.alarm.time) return;
+  const stamp = dayKey(now) + ' ' + S.alarm.time;
+  if (S.alarm.lastFire === stamp) return;
+  S.alarm.lastFire = stamp; saveState();
+  fireAlarm();
+}
+function fireAlarm() {
+  $('#ring-time').textContent = S.alarm.time;
+  $('#ov-ring').classList.add('show');
+  $('#ring-task').style.display = S.alarm.math ? 'block' : 'none';
+  $('#ring-off').style.display = S.alarm.math ? 'none' : 'flex';
+  if (S.alarm.math) newMathTask();
+  Sound.startAlarm();
+  Voice.say('Тұратын уақыт келді!');
+}
+/* Жаңа математика мысалы */
+function newMathTask() {
+  const rnd = () => CFG.MATH_MIN + Math.floor(Math.random() * (CFG.MATH_MAX - CFG.MATH_MIN));
+  const a = rnd(), b = rnd();
+  mathAnswer = a + b;
+  $('#ring-math').textContent = a + ' + ' + b + ' = ?';
+  $('#ring-ans').value = '';
+  $('#ring-ans').classList.remove('err');
+}
+function checkMath() {
+  const el = $('#ring-ans');
+  if (+el.value === mathAnswer) return dismissAlarm();
+  el.classList.add('err');
+  el.value = '';
+  toast('Дұрыс емес. Тағы бір рет ойлан.');
+  buzz(CFG.VIB_OK);
+  setTimeout(() => el.classList.remove('err'), 400);
+}
+function dismissAlarm() {
+  Sound.stopAlarm();
+  $('#ov-ring').classList.remove('show');
+  markAlarmDone();
+  nav('alarm');
+  renderAlarm();
+  toast('Оятқыш өшірілді. Күн сәтті басталсын!');
+}
+
+/* =========================================================================
+   12) БАПТАУЛАР, ЭКСПОРТ / ИМПОРТ, ЕСКЕ САЛУ
+   ========================================================================= */
+function renderSettings() {
+  ['sound', 'vibro', 'voice', 'notif', 'photo'].forEach((k) =>
+    $('#st-' + k).classList.toggle('on', !!S.settings[k]));
+  $('#st-rtime').value = S.settings.rtime;
+  $('#st-notif-sub').textContent = S.settings.notif
+    ? 'Қосулы — күн сайын ' + S.settings.rtime : 'Өшірулі';
+  const p = S.profile;
+  $('#st-prof').innerHTML =
+    '<div class="task"><div class="tick ic">' + ico('user') +
+    '</div><div style="flex:1"><div class="t-name">Жасы</div>' +
+    '<div class="t-sub">' + (p.age || 'көрсетілмеген') + '</div></div></div>' +
+    '<div class="task"><div class="tick ic">' + ico('target') +
+    '</div><div style="flex:1"><div class="t-name">Мақсат</div>' +
+    '<div class="t-sub">' + (p.goal || 'көрсетілмеген') + '</div></div></div>' +
+    '<div class="task"><div class="tick ic">' + ico('gauge') +
+    '</div><div style="flex:1"><div class="t-name">Деңгей</div>' +
+    '<div class="t-sub">' + (p.level || 'көрсетілмеген') + '</div></div></div>';
+}
+function toggleSetting(key) {
+  S.settings[key] = !S.settings[key];
+  if (key === 'notif' && S.settings[key]) return askNotify();
+  saveState(); renderSettings(); buzz();
+  if (key === 'sound' && S.settings.sound) Sound.beep(CFG.BEEP_HI, 140);
+}
+/* Хабарламаға рұқсат сұрау */
+function askNotify() {
+  if (!('Notification' in window)) {
+    S.settings.notif = false; toast('Бұл браузер хабарламаны қолдамайды.');
+    saveState(); renderSettings(); return;
+  }
+  Notification.requestPermission().then((res) => {
+    S.settings.notif = (res === 'granted');
+    if (res !== 'granted') toast('Рұқсат берілмеді — хабарлама келмейді.');
+    saveState(); renderSettings();
+  }).catch(() => { S.settings.notif = false; renderSettings(); });
+}
+/* Күнделікті еске салуды тексеру */
+let lastNotifyKey = '';
+function checkReminder(now) {
+  if (!S.settings.notif || hhmm(now) !== S.settings.rtime) return;
+  const k = dayKey(now) + S.settings.rtime;
+  if (lastNotifyKey === k) return;
+  lastNotifyKey = k;
+  if (isDayDone(today(false))) return;
+  sendNotify('FitDay', 'Бүгінгі жаттығу күтіп тұр. 5 минут та жетеді!');
+}
+function sendNotify(title, body) {
+  try {
+    if (Notification.permission !== 'granted') return;
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'notify', title: title, body: body });
+    } else { new Notification(title, { body: body, icon: 'icon-192.png' }); }
+  } catch (e) { /* хабарлама шықпады — үнсіз */ }
+}
+/* Деректі JSON файлға шығару (фотосыз — тым үлкен болмас үшін) */
+function exportData() {
+  downloadJSON(S, 'fitday-' + dayKey() + '.json');
+}
+/* JSON файлдан деректі қалпына келтіру */
+function importData(file) {
+  const fr = new FileReader();
+  fr.onload = () => applyImport(fr.result);
+  fr.onerror = () => toast('Файлды оқу мүмкін болмады.');
+  fr.readAsText(file);
+}
+function applyImport(text) {
+  try {
+    const data = JSON.parse(text);
+    if (data && data.photos && data.state) return importBundle(data);
+    if (!data || typeof data !== 'object' || !('days' in data)) throw new Error('bad');
+    S = mergeState(emptyState(), data);
+    S.onboarded = true;
+    saveState(); renderAll(); renderAlarm();
+    toast('Дерек сәтті қалпына келтірілді.');
+  } catch (e) { toast('Файл жарамсыз — FitDay экспорты емес.'); }
+}
+function resetAll() {
+  if (!confirm('Барлық прогресс, streak және баптау өшіріледі. Сенімдісің бе?')) return;
+  if (!confirm('Соңғы растау: деректі қайтару мүмкін болмайды!')) return;
+  S = emptyState();
+  saveState(); renderAll(); renderAlarm();
+  toast('Барлығы нөлденді.');
+  startOnboarding();
+}
+
+/* =========================================================================
+   13) ONBOARDING — 3 сұрақ, соңында жоспар құрылады
+   ========================================================================= */
+const OB = [
+  { key: 'age', q: 'Жасың нешеде?', hint: 'Жүктемені дұрыс таңдау үшін керек.',
+    opts: ['14–19 жас', '20–29 жас', '30–39 жас', '40+ жас'] },
+  { key: 'goal', q: 'Мақсатың қандай?', hint: 'Соған қарай кеңес береміз.',
+    opts: ['Салмақ тастау', 'Форманы ұстау', 'Күш пен төзімділік', 'Бет пен тері күтімі'] },
+  { key: 'level', q: 'Дайындығың қалай?', hint: 'Кейін баптаудан өзгертуге болады.',
+    opts: ['Жаңадан бастаймын', 'Кейде жаттығамын', 'Тұрақты жаттығамын'] }
+];
+let obStep = 0, obPick = [null, null, null];
+
+function startOnboarding() {
+  obStep = 0; obPick = [null, null, null];
+  $('#ov-onboard').classList.add('show');
+  renderOb();
+}
+function renderOb() {
+  const q = OB[obStep];
+  $('#ob-q').textContent = q.q;
+  $('#ob-hint').textContent = q.hint;
+  $('#ob-opts').innerHTML = q.opts.map((o, i) =>
+    '<button class="ob-opt' + (obPick[obStep] === i ? ' on' : '') + '" data-i="' + i + '">' +
+    o + '</button>').join('');
+  $$('#ob-opts .ob-opt').forEach((b) => b.addEventListener('click', () => {
+    obPick[obStep] = +b.dataset.i; renderOb(); buzz();
+  }));
+  $$('#ob-dots i').forEach((d, i) => d.classList.toggle('on', i === obStep));
+  $('#ob-back').style.display = obStep ? 'flex' : 'none';
+  $('#ob-next').textContent = obStep === OB.length - 1 ? 'Жоспарды құру' : 'Әрі қарай';
+}
+function obNext() {
+  if (obPick[obStep] === null) return toast('Бір нұсқаны таңда.');
+  if (obStep < OB.length - 1) { obStep++; renderOb(); return; }
+  finishOnboarding();
+}
+function finishOnboarding() {
+  S.profile.age = OB[0].opts[obPick[0]];
+  S.profile.goal = OB[1].opts[obPick[1]];
+  S.profile.level = OB[2].opts[obPick[2]];
+  S.onboarded = true;
+  S.body.startedAt = S.body.startedAt || dayKey();
+  S.face.startedAt = S.face.startedAt || dayKey();
+  saveState();
+  $('#ov-onboard').classList.remove('show');
+  renderAll(); nav('home');
+  toast('Бағдарлама дайын. 1-күннен баста!');
+}
+
+/* =========================================================================
+   14) ПРОГРЕСС ФОТОСЫ
+   Фото ЕШҚАШАН құрылғыдан шықпайды: сервер жоқ, жүктеу жоқ, API жоқ.
+   Бәрі IndexedDB-де («fitday-photos» → «photos»), тек осы телефонда.
+   ========================================================================= */
+const PH = {
+  DB: 'fitday-photos', STORE: 'photos',
+  MAX_W: 900,                // сақтар алдында ені осыған дейін кішірейеді
+  SMALL_W: 600,              // әлі үлкен болса — тағы кішірейеді
+  QUALITY: 0.72,
+  MAX_BYTES: 4 * 1024 * 1024,
+  REMIND_DAYS: 7,
+  TYPES: { front: 'Алдынан', side: 'Бүйірден', face: 'Бет' },
+  LONG_MS: 600                // ұзақ басу
+};
+const SHARE = { W: 1080, H: 1350, PAD: 40, GAP: 20, IMG_Y: 150, IMG_H: 760, R: 24 };
+
+/* ---------- IndexedDB қабаты ---------- */
+const PhotoDB = {
+  db: null, broken: false,
+  open() {
+    if (this.db) return Promise.resolve(this.db);
+    if (this.broken) return Promise.reject(new Error('no-idb'));
+    return new Promise((res, rej) => {
+      let req;
+      try { req = window.indexedDB.open(PH.DB, 1); }
+      catch (e) { this.broken = true; return rej(e); }
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(PH.STORE)) {
+          db.createObjectStore(PH.STORE, { keyPath: 'id', autoIncrement: true });
+        }
+      };
+      req.onsuccess = () => { this.db = req.result; res(this.db); };
+      req.onerror = () => { this.broken = true; rej(req.error); };
+    });
+  },
+  store(mode) {
+    return this.open().then((db) => db.transaction(PH.STORE, mode).objectStore(PH.STORE));
+  },
+  add(rec) { return this.store('readwrite').then((st) => wrapReq(st.add(rec))); },
+  all() { return this.store('readonly').then((st) => wrapReq(st.getAll())); },
+  del(id) { return this.store('readwrite').then((st) => wrapReq(st.delete(id))); }
+};
+function wrapReq(req) {
+  return new Promise((res, rej) => {
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+/* Қатені қазақша түсіндіру */
+function photoError(e) {
+  const name = (e && e.name) || '';
+  if (name === 'QuotaExceededError') return toast('Орын жетпейді. Ескі фотоларды өшір.');
+  toast('Фото сақтау мүмкін болмады. Жеке режимде жад жабық болуы мүмкін.');
+}
+
+/* ---------- Сурет сығу: canvas → 900px → jpeg 0.72 ---------- */
+function loadImageFile(src) {
+  return new Promise((res, rej) => {
+    const url = (typeof src === 'string') ? src : URL.createObjectURL(src);
+    const img = new Image();
+    img.onload = () => { if (src !== url) URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { if (src !== url) URL.revokeObjectURL(url); rej(new Error('bad-image')); };
+    img.src = url;
+  });
+}
+function shrinkImage(img, maxW) {
+  const scale = Math.min(1, maxW / img.naturalWidth);
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(img.naturalWidth * scale);
+  cv.height = Math.round(img.naturalHeight * scale);
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  return new Promise((res, rej) => {
+    cv.toBlob((b) => (b ? res(b) : rej(new Error('no-blob'))), 'image/jpeg', PH.QUALITY);
+  });
+}
+/* Түпнұсқа сақталмайды — тек сығылған нұсқа */
+function compressPhoto(file) {
+  return loadImageFile(file).then((img) => shrinkImage(img, PH.MAX_W)
+    .then((blob) => (blob.size > PH.MAX_BYTES) ? shrinkImage(img, PH.SMALL_W) : blob));
+}
+
+/* ---------- Күй ---------- */
+let Photos = [];              // барлық жазба (уақыт бойынша)
+let PhotoURLs = {};           // id → objectURL
+let phFilter = 'front';
+let shotType = 'front', shotBlob = null;
+let pvList = [], pvIdx = 0;
+let cmpA = null, cmpB = null;
+
+function photoURL(p) {
+  if (!PhotoURLs[p.id]) PhotoURLs[p.id] = URL.createObjectURL(p.blob);
+  return PhotoURLs[p.id];
+}
+function dropURL(id) {
+  if (!PhotoURLs[id]) return;
+  URL.revokeObjectURL(PhotoURLs[id]);
+  delete PhotoURLs[id];
+}
+function photoById(id) { return Photos.filter((p) => p.id === id)[0] || null; }
+function byType(type) { return Photos.filter((p) => p.type === type); }
+/* Фото түсірілген күнгі бағдарлама күні */
+function photoDay() {
+  return Math.max(1, S.body.completed.length, S.face.completed.length);
+}
+function dayLabel(p) { return (p.dayNumber || 1) + '-КҮН'; }
+function parseKey(k) {
+  const a = String(k).split('-');
+  return new Date(+a[0], +a[1] - 1, +a[2]);
+}
+function daysBetween(a, b) {
+  return Math.round((parseKey(b) - parseKey(a)) / 86400000);
+}
+function shortDate(k) {
+  const d = parseKey(k);
+  return d.getDate() + ' ' + MONTH[d.getMonth()].slice(0, 4);
+}
+
+/* ---------- Тор мен есептегіштер ---------- */
+function loadPhotos() {
+  return PhotoDB.all().then((list) => {
+    Photos = (list || []).sort((a, b) => (a.date === b.date) ? a.id - b.id
+      : (a.date < b.date ? -1 : 1));
+    renderPhotos();
+  }).catch((e) => { renderPhotos(); photoError(e); });
+}
+function renderPhotos() {
+  const list = byType(phFilter);
+  $('#ph-grid').innerHTML = list.map(cellHTML).join('');
+  $$('#ph-grid .ph-cell').forEach(bindCell);
+  $('#ph-grid').style.display = list.length ? 'grid' : 'none';
+  $('#ph-empty').style.display = list.length ? 'none' : 'block';
+  $('#ph-compare').disabled = list.length < 2;
+  Object.keys(PH.TYPES).forEach((t) => {
+    $('[data-count="' + t + '"]').textContent = byType(t).length;
+  });
+  renderReminder();
+}
+function cellHTML(p) {
+  return '<div class="ph-cell" data-id="' + p.id + '">' +
+    '<img src="' + photoURL(p) + '" alt=""><b>' + dayLabel(p) + '</b>' +
+    '<i>' + shortDate(p.date) + '</i></div>';
+}
+/* Басу — қарау, ұзақ басу — өшіру */
+function bindCell(el) {
+  const id = +el.dataset.id;
+  let timer = null, long = false;
+  const start = () => { long = false; timer = setTimeout(() => { long = true; askDelete(id); }, PH.LONG_MS); };
+  const stop = () => { clearTimeout(timer); };
+  el.addEventListener('click', () => { if (!long) openViewer(id); });
+  el.addEventListener('touchstart', start, { passive: true });
+  el.addEventListener('touchend', stop);
+  el.addEventListener('touchmove', stop, { passive: true });
+  el.addEventListener('contextmenu', (e) => { e.preventDefault(); askDelete(id); });
+}
+function askDelete(id) {
+  const p = photoById(id);
+  if (!p || !confirm(dayLabel(p) + ' фотосын өшіру керек пе?')) return;
+  PhotoDB.del(id).then(() => { dropURL(id); loadPhotos(); toast('Фото өшірілді.'); })
+    .catch(photoError);
+}
+
+/* ---------- Еске салу баннері ---------- */
+function remindDays() {
+  const last = Photos.length ? Photos[Photos.length - 1] : null;
+  return last ? daysBetween(last.date, dayKey()) : 0;
+}
+function needPhotoReminder() {
+  return !!(S.settings.photo && Photos.length > 0 &&
+    remindDays() >= PH.REMIND_DAYS && S.photoSeen !== dayKey());
+}
+function renderReminder() {
+  const show = needPhotoReminder();
+  $('#ph-remind').style.display = show ? 'flex' : 'none';
+  $('#h-photo-remind').style.display = show ? 'flex' : 'none';
+  if (show) $('#ph-rem-days').textContent = remindDays();
+}
+
+/* ---------- Түсіру экраны ---------- */
+function openShot(type) {
+  shotType = type; shotBlob = null;
+  const prev = byType(type).slice(-1)[0];
+  $('#sh-title').textContent = PH.TYPES[type].toUpperCase();
+  $('#sh-day').textContent = photoDay() + '-КҮН';
+  $('#shot-ghost').style.display = prev ? '' : 'none';
+  if (prev) $('#shot-ghost').src = photoURL(prev);
+  $('#shot-cap').textContent = prev ? 'Алдыңғы фотоға сәйкестендір'
+    : 'Бұл — бірінші фото. Қалыпты есте сақта.';
+  resetShotView();
+  $('#ov-shot').classList.add('show');
+}
+function resetShotView() {
+  shotBlob = null;
+  $('#shot-new').style.display = 'none';
+  $('#shot-none').style.display = ($('#shot-ghost').style.display === 'none') ? '' : 'none';
+  $('#sh-take').style.display = 'flex';
+  $('#sh-actions').style.display = 'none';
+  $('#sh-ghost-t').style.display = 'none';
+}
+/* Файл таңдалды: тексеру → сығу → алдын ала көрсету */
+function onPhotoFile(file) {
+  if (!file) return;
+  if (!/^image\//.test(file.type || '')) return toast('Тек сурет файлын таңда.');
+  toast('Сурет дайындалып жатыр…');
+  compressPhoto(file).then(showShotResult)
+    .catch(() => toast('Суретті оқу мүмкін болмады. Басқа файлды көр.'));
+}
+function showShotResult(blob) {
+  shotBlob = blob;
+  const img = $('#shot-new');
+  if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+  img.dataset.url = URL.createObjectURL(blob);
+  img.src = img.dataset.url;
+  img.style.display = '';
+  $('#shot-none').style.display = 'none';
+  $('#sh-take').style.display = 'none';
+  $('#sh-actions').style.display = 'flex';
+  $('#sh-ghost-t').style.display = ($('#shot-ghost').style.display === 'none') ? 'none' : 'flex';
+  toast('Дайын: ' + Math.round(blob.size / 1024) + ' КБ');
+}
+function saveShot() {
+  if (!shotBlob) return;
+  PhotoDB.add({ date: dayKey(), type: shotType, blob: shotBlob,
+    dayNumber: photoDay(), weight: null })
+    .then(() => {
+      $('#ov-shot').classList.remove('show');
+      S.photoSeen = dayKey(); saveState();
+      buzz(CFG.VIB_OK);
+      return loadPhotos();
+    })
+    .then(() => toast('Фото телефонға сақталды.'))
+    .catch(photoError);
+}
+function toggleGhost() {
+  const g = $('#shot-ghost');
+  const off = g.style.opacity === '0';
+  g.style.opacity = off ? '' : '0';
+  $('#sh-ghost-t').textContent = off ? 'Көлеңкені жасыру' : 'Көлеңкені көрсету';
+}
+
+/* ---------- Толық экран ---------- */
+function openViewer(id) {
+  pvList = byType(phFilter);
+  pvIdx = Math.max(0, pvList.map((p) => p.id).indexOf(id));
+  paintViewer();
+  $('#ov-photo').classList.add('show');
+}
+function paintViewer() {
+  const p = pvList[pvIdx];
+  if (!p) return $('#ov-photo').classList.remove('show');
+  $('#pv-img').src = photoURL(p);
+  $('#pv-title').textContent = PH.TYPES[p.type];
+  $('#pv-day').textContent = dayLabel(p);
+  $('#pv-date').textContent = shortDate(p.date);
+  $('#pv-prev').disabled = (pvIdx === 0);
+  $('#pv-next').disabled = (pvIdx >= pvList.length - 1);
+}
+function stepViewer(d) {
+  pvIdx = clamp(pvIdx + d, 0, pvList.length - 1);
+  paintViewer(); buzz();
+}
+/* Свайп: солға — келесі, оңға — алдыңғы */
+function initViewerSwipe() {
+  let x0 = 0;
+  const box = $('#pv-wrap');
+  box.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+  box.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > CFG.SWIPE_X) stepViewer(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
+/* ---------- Салыстыру ---------- */
+function openCompare() {
+  const list = byType(phFilter);
+  if (list.length < 2) return toast('Салыстыру үшін кемінде екі фото керек.');
+  cmpA = list[0].id; cmpB = list[list.length - 1].id;
+  $('#cm-type').textContent = PH.TYPES[phFilter];
+  renderCompare();
+  $('#ov-cmp').classList.add('show');
+  setWipe(50);
+}
+function renderCompare() {
+  const a = photoById(cmpA), b = photoById(cmpB);
+  if (!a || !b) return;
+  $('#cmp-a').src = photoURL(a);
+  $('#cmp-b').src = photoURL(b);
+  $('#cmp-lab').textContent = dayLabel(a) + ' → ' + dayLabel(b) + ' · ' +
+    Math.abs(daysBetween(a.date, b.date)) + ' күн';
+  $('#cmp-strip-a').innerHTML = byType(phFilter).map((p) => stripHTML(p, cmpA)).join('');
+  $('#cmp-strip-b').innerHTML = byType(phFilter).map((p) => stripHTML(p, cmpB)).join('');
+  bindStrip('#cmp-strip-a', (id) => { cmpA = id; renderCompare(); });
+  bindStrip('#cmp-strip-b', (id) => { cmpB = id; renderCompare(); });
+}
+function stripHTML(p, sel) {
+  return '<button data-id="' + p.id + '"' + (p.id === sel ? ' class="on"' : '') + '>' +
+    '<img src="' + photoURL(p) + '" alt=""><i>' + (p.dayNumber || 1) + '</i></button>';
+}
+function bindStrip(sel, fn) {
+  $$(sel + ' button').forEach((b) => b.addEventListener('click', () => { fn(+b.dataset.id); buzz(); }));
+}
+/* Тік сырғытпа: сол жақ — ескі, оң жақ — жаңа */
+function setWipe(pct) {
+  const v = clamp(pct, 0, 100);
+  $('#cmp-new').style.clipPath = 'inset(0 0 0 ' + v + '%)';
+  $('#cmp-handle').style.left = v + '%';
+}
+function initWipe() {
+  const box = $('#cmp-box');
+  let on = false;
+  const move = (x) => {
+    const r = box.getBoundingClientRect();
+    setWipe((x - r.left) / r.width * 100);
+  };
+  box.addEventListener('pointerdown', (e) => { on = true; box.setPointerCapture(e.pointerId); move(e.clientX); });
+  box.addEventListener('pointermove', (e) => { if (on) move(e.clientX); });
+  box.addEventListener('pointerup', () => { on = false; });
+  box.addEventListener('pointercancel', () => { on = false; });
+}
+function quickCompare() {
+  const list = byType(phFilter);
+  if (list.length < 2) return;
+  cmpA = list[0].id; cmpB = list[list.length - 1].id;
+  renderCompare(); setWipe(50); buzz();
+}
+
+/* ---------- Суретке экспорт (тек жүктеп алу) ---------- */
+function makeShareImage() {
+  const a = photoById(cmpA), b = photoById(cmpB);
+  if (!a || !b) return toast('Алдымен екі фото таңда.');
+  Promise.all([loadImageFile(photoURL(a)), loadImageFile(photoURL(b))])
+    .then((im) => downloadCanvas(drawShare(im[0], im[1], a, b)))
+    .catch(() => toast('Сурет жасау мүмкін болмады.'));
+}
+function drawShare(ia, ib, a, b) {
+  const cv = document.createElement('canvas');
+  cv.width = SHARE.W; cv.height = SHARE.H;
+  const ctx = cv.getContext('2d');
+  const w = (SHARE.W - SHARE.PAD * 2 - SHARE.GAP) / 2;
+  ctx.fillStyle = cssVar('--bg'); ctx.fillRect(0, 0, SHARE.W, SHARE.H);
+  ctx.fillStyle = cssVar('--dim');
+  ctx.font = '600 26px Inter, system-ui'; ctx.textAlign = 'left';
+  ctx.fillText('ПРОГРЕСС · ' + PH.TYPES[a.type].toUpperCase(), SHARE.PAD, 84);
+  drawCover(ctx, ia, SHARE.PAD, SHARE.IMG_Y, w, SHARE.IMG_H);
+  drawCover(ctx, ib, SHARE.PAD + w + SHARE.GAP, SHARE.IMG_Y, w, SHARE.IMG_H);
+  drawTag(ctx, dayLabel(a), SHARE.PAD + 20, SHARE.IMG_Y + 20);
+  drawTag(ctx, dayLabel(b), SHARE.PAD + w + SHARE.GAP + 20, SHARE.IMG_Y + 20);
+  drawShareFoot(ctx, a, b);
+  return cv;
+}
+function drawShareFoot(ctx, a, b) {
+  const y = SHARE.IMG_Y + SHARE.IMG_H;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = cssVar('--text'); ctx.font = '700 54px Inter, system-ui';
+  ctx.fillText(dayLabel(a) + '  →  ' + dayLabel(b), SHARE.PAD, y + 90);
+  ctx.fillStyle = cssVar('--accent'); ctx.font = '700 38px Inter, system-ui';
+  ctx.fillText(Math.abs(daysBetween(a.date, b.date)) + ' күн айырма', SHARE.PAD, y + 148);
+  ctx.fillStyle = cssVar('--elevated');
+  ctx.fillRect(SHARE.PAD, SHARE.H - 130, SHARE.W - SHARE.PAD * 2, 2);
+  ctx.fillStyle = cssVar('--text'); ctx.font = '700 34px Inter, system-ui';
+  ctx.fillText('FitDay · ' + PRG.DAYS + ' күн', SHARE.PAD, SHARE.H - 60);
+  ctx.textAlign = 'right'; ctx.fillStyle = cssVar('--muted');
+  ctx.font = '600 30px Inter, system-ui';
+  ctx.fillText(totalDays() + ' күн · streak ' + S.streak.count, SHARE.W - SHARE.PAD, SHARE.H - 60);
+}
+/* Суретті шеңберлі тіктөртбұрышқа «cover» етіп салу */
+function drawCover(ctx, img, x, y, w, h) {
+  const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const iw = img.naturalWidth * s, ih = img.naturalHeight * s;
+  ctx.save();
+  roundPath(ctx, x, y, w, h, SHARE.R);
+  ctx.clip();
+  ctx.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
+  ctx.restore();
+}
+function roundPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function drawTag(ctx, text, x, y) {
+  ctx.font = '700 26px Inter, system-ui'; ctx.textAlign = 'left';
+  const w = ctx.measureText(text).width + 28;
+  ctx.fillStyle = cssVar('--accent');
+  roundPath(ctx, x, y, w, 44, 12); ctx.fill();
+  ctx.fillStyle = cssVar('--accent-ink');
+  ctx.fillText(text, x + 14, y + 30);
+}
+function downloadCanvas(cv) {
+  cv.toBlob((blob) => {
+    if (!blob) return toast('Сурет жасау мүмкін болмады.');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'fitday-' + dayKey() + '.jpg';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast('Сурет жүктелді.');
+  }, 'image/jpeg', 0.9);
+}
+
+/* ---------- Фотомен бірге экспорт / импорт ---------- */
+function blobToDataURL(blob) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = () => rej(fr.error);
+    fr.readAsDataURL(blob);
+  });
+}
+function dataURLToBlob(url) {
+  const parts = String(url).split(',');
+  const mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+  const bin = atob(parts[1]);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+function exportWithPhotos() {
+  loadPhotos().then(() => {
+    if (!Photos.length) return toast('Әзірге сақталған фото жоқ.');
+    if (!confirm('Фотолармен бірге экспорт: файл 20–50 МБ болуы мүмкін. Жалғастырасың ба?')) return;
+    toast('Файл дайындалып жатыр…');
+    Promise.all(Photos.map(photoRecord)).then(saveBundle).catch(() => toast('Экспорт мүмкін болмады.'));
+  });
+}
+function photoRecord(p) {
+  return blobToDataURL(p.blob).then((data) => ({ date: p.date, type: p.type,
+    dayNumber: p.dayNumber, weight: p.weight || null, data: data }));
+}
+function saveBundle(list) {
+  downloadJSON({ fitday: 2, state: S, photos: list }, 'fitday-full-' + dayKey() + '.json');
+}
+function downloadJSON(obj, name) {
+  try {
+    const blob = new Blob([JSON.stringify(obj)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast('Дерек файлға сақталды.');
+  } catch (e) { toast('Экспорт мүмкін болмады.'); }
+}
+/* Фотолы дестені қалпына келтіру */
+function importBundle(data) {
+  S = mergeState(emptyState(), data.state);
+  S.onboarded = true;
+  saveState(); renderAll(); renderAlarm();
+  const list = data.photos || [];
+  list.reduce((chain, r) => chain.then(() => PhotoDB.add({ date: r.date, type: r.type,
+    blob: dataURLToBlob(r.data), dayNumber: r.dayNumber, weight: r.weight })),
+  Promise.resolve())
+    .then(loadPhotos)
+    .then(() => toast('Дерек пен ' + list.length + ' фото қалпына келтірілді.'))
+    .catch(photoError);
+}
+
+/* =========================================================================
+   15) ІСКЕ ҚОСУ ЖӘНЕ ОҚИҒАЛАРДЫ БАЙЛАУ
+   ========================================================================= */
+function bindNav() {
+  $$('[data-nav]').forEach((b) => b.addEventListener('click', () => nav(b.dataset.nav)));
+  $('#go-stats').addEventListener('click', () => nav('stats'));
+  $('#go-set').addEventListener('click', () => nav('set'));
+}
+function bindRunner() {
+  $('#r-pause').addEventListener('click', togglePause);
+  $('#r-back').addEventListener('click', prevStep);
+  $('#r-done').addEventListener('click', doneStep);
+  $('#r-close').addEventListener('click', () => stopRun(true));
+  $('#d-ok').addEventListener('click', closeDone);
+  $('#d-cycle').addEventListener('click', startNextCycle);
+}
+function closeDone() {
+  $('#ov-run').classList.remove('show');
+  nav(PROGRAMS[Run.program].tab);
+}
+/* 30 күн аяқталды — база 1.3 есе өсіп, 2-айналым басталады */
+function startNextCycle() {
+  restartProgram(Run.program, true);
+  $('#ov-run').classList.remove('show');
+  nav(PROGRAMS[Run.program].tab);
+  toast((S[Run.program].cycle) + '-айналым басталды. Жүктеме артты.');
+}
+function bindAlarm() {
+  $('#a-time').addEventListener('change', (e) => {
+    S.alarm.time = e.target.value || '07:00'; saveState(); renderAlarm();
+  });
+  $('#a-on').addEventListener('click', () => {
+    S.alarm.on = !S.alarm.on;
+    if (S.alarm.on) { Sound.ready(); toast('Оятқыш қосылды: ' + alarmSummary()); }
+    saveState(); renderAlarm(); buzz();
+  });
+  $('#a-math').addEventListener('click', () => {
+    S.alarm.math = !S.alarm.math; saveState(); renderAlarm(); buzz();
+  });
+  $('#a-test').addEventListener('click', () => { Sound.ready(); Sound.startAlarm(); });
+  $('#a-stop-test').addEventListener('click', () => Sound.stopAlarm());
+  bindChips('#a-peak', (v) => { S.alarm.peak = +v; });
+  bindChips('#a-ramp', (v) => { S.alarm.ramp = v; });
+  $('#a-vibro').addEventListener('click', () => {
+    S.alarm.vibro = !S.alarm.vibro;
+    saveState(); renderSounds(); buzz();
+  });
+  $('#a-go-workout').addEventListener('click', () =>
+    tryStartDay('body', S.body.currentDay, false));
+  $('#ring-check').addEventListener('click', checkMath);
+  $('#ring-off').addEventListener('click', dismissAlarm);
+  $('#ring-ans').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkMath(); });
+}
+/* Үш нұсқалы қатарлар (шың, күшею жылдамдығы) */
+function bindChips(sel, apply) {
+  $$(sel + ' .chip-b').forEach((b) => b.addEventListener('click', () => {
+    apply(b.dataset.v);
+    saveState(); renderSounds(); buzz();
+  }));
+}
+function bindSettings() {
+  ['sound', 'vibro', 'voice', 'notif', 'photo'].forEach((k) =>
+    $('#st-' + k).addEventListener('click', () => toggleSetting(k)));
+  $('#st-rtime').addEventListener('change', (e) => {
+    S.settings.rtime = e.target.value || '08:00'; saveState(); renderSettings();
+  });
+  $('#st-export').addEventListener('click', exportData);
+  $('#st-import').addEventListener('click', () => $('#st-file').click());
+  $('#st-file').addEventListener('change', (e) => {
+    if (e.target.files[0]) importData(e.target.files[0]);
+    e.target.value = '';
+  });
+  $('#st-reset').addEventListener('click', resetAll);
+  $('#st-export-ph').addEventListener('click', exportWithPhotos);
+  $('#st-redo').addEventListener('click', startOnboarding);
+  $('#ob-next').addEventListener('click', obNext);
+  $('#ob-back').addEventListener('click', () => { if (obStep) { obStep--; renderOb(); } });
+}
+/* Прогресс бетінің екі табы: Статистика | Фото */
+function showPTab(name) {
+  $$('.seg-b').forEach((x) => x.classList.toggle('on', x.dataset.ptab === name));
+  $('#tab-stats').style.display = (name === 'stats') ? '' : 'none';
+  $('#tab-photo').style.display = (name === 'photo') ? '' : 'none';
+  if (name === 'photo') loadPhotos();
+}
+function openPhotoTab() { showPTab('photo'); }
+function bindPTabs() {
+  $$('.seg-b').forEach((b) => b.addEventListener('click', () => {
+    showPTab(b.dataset.ptab); buzz();
+  }));
+}
+function bindPhotos() {
+  bindPTabs();
+  $$('#ph-shoot .shot-b').forEach((b) =>
+    b.addEventListener('click', () => openShot(b.dataset.type)));
+  $$('#ph-filter .chip-b').forEach((b) => b.addEventListener('click', () => {
+    phFilter = b.dataset.type;
+    $$('#ph-filter .chip-b').forEach((x) => x.classList.toggle('on', x === b));
+    renderPhotos(); buzz();
+  }));
+  $('#ph-first').addEventListener('click', () => openShot(phFilter));
+  $('#ph-rem-x').addEventListener('click', () => {
+    S.photoSeen = dayKey(); saveState(); renderReminder();
+  });
+  $('#h-photo-remind').addEventListener('click', () => { nav('stats'); openPhotoTab(); });
+  bindShot();
+  bindViewer();
+  bindCompare();
+}
+function bindShot() {
+  $('#sh-close').addEventListener('click', () => $('#ov-shot').classList.remove('show'));
+  $('#sh-take').addEventListener('click', () => $('#ph-file').click());
+  $('#sh-retry').addEventListener('click', () => { resetShotView(); $('#ph-file').click(); });
+  $('#sh-save').addEventListener('click', saveShot);
+  $('#sh-ghost-t').addEventListener('click', toggleGhost);
+  $('#ph-file').addEventListener('change', (e) => {
+    onPhotoFile(e.target.files[0]);
+    e.target.value = '';
+  });
+}
+function bindViewer() {
+  $('#pv-close').addEventListener('click', () => $('#ov-photo').classList.remove('show'));
+  $('#pv-prev').addEventListener('click', () => stepViewer(-1));
+  $('#pv-next').addEventListener('click', () => stepViewer(1));
+  $('#pv-del').addEventListener('click', () => {
+    const p = pvList[pvIdx];
+    if (p) { $('#ov-photo').classList.remove('show'); askDelete(p.id); }
+  });
+  initViewerSwipe();
+}
+function bindCompare() {
+  $('#ph-compare').addEventListener('click', openCompare);
+  $('#cm-close').addEventListener('click', () => $('#ov-cmp').classList.remove('show'));
+  $('#cmp-quick').addEventListener('click', quickCompare);
+  $('#cmp-make').addEventListener('click', makeShareImage);
+  initWipe();
+}
+/* Секунд сайынғы жалпы сағат: оятқыш пен еске салу */
+function startClock() {
+  setInterval(() => {
+    const now = new Date();
+    checkAlarm(now);
+    checkReminder(now);
+    if (now.getSeconds() === 0 && now.getMinutes() === 0) renderHome();  // түн ортасында жаңарту
+  }, 1000);
+}
+/* Service worker тіркеу (file:// режимінде мүмкін емес) */
+function initSW() {
+  if (!('serviceWorker' in navigator)) return;
+  if (location.protocol === 'file:') {
+    console.info('FitDay: офлайн кэш үшін файлды сервер арқылы аш (http://).');
+    return;
+  }
+  navigator.serviceWorker.register('sw.js').catch(() => {
+    toast('Офлайн режимін қосу мүмкін болмады.');
+  });
+}
+/* PWA орнату түймесі */
+function initInstall() {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); installEvt = e;
+    $('#h-install').style.display = 'flex';
+  });
+  $('#h-install').addEventListener('click', () => {
+    if (!installEvt) return toast('Браузер мәзірінен «Экранға қосу» таңда.');
+    installEvt.prompt();
+    installEvt.userChoice.finally(() => { installEvt = null; $('#h-install').style.display = 'none'; });
+  });
+}
+/* Дауыс тізімі кешігіп жүктелуі мүмкін */
+function initVoices() {
+  Voice.choose();
+  if (Voice.ok && typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
+    window.speechSynthesis.onvoiceschanged = () => Voice.choose();
+  }
+}
+function hideSkeleton() {
+  const sk = $('#skeleton');
+  if (!sk) return;                 // қайта шақырылса — өшіретін ештеңе жоқ
+  sk.style.opacity = '0';
+  setTimeout(() => sk.remove(), 300);
+}
+/* Қосымшаны іске қосу */
+function init() {
+  S = loadState();
+  grantFreeze();
+  saveState();
+  bindNav(); bindRunner(); bindAlarm(); bindSettings(); bindPhotos();
+  initSwipe(); initVoices(); initInstall(); initSW();
+  loadPhotos();                    // еске салу баннері үшін фотоларды оқып қоямыз
+  renderAll(); renderFace(); renderAlarm();
+  startClock();
+  const hash = (location.hash || '').replace('#', '');
+  if (CFG.TABS.indexOf(hash) >= 0) nav(hash);
+  setTimeout(hideSkeleton, CFG.SKELETON_MS);
+  if (!S.onboarded) setTimeout(startOnboarding, CFG.SKELETON_MS + 100);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
