@@ -476,6 +476,17 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.6)}
 @keyframes sk{0%,100%{opacity:0.5}50%{opacity:0.9}}
 .sk.a{height:108px}.sk.b{height:168px}.sk.c{height:84px}
 
+/* 3D көрінісі — SVG нұсқасының орнына қойылады, сәтсіз болса қайта ашылады */
+.v3d{position:relative;width:100%;aspect-ratio:1/1;border-radius:var(--r-card);
+  overflow:hidden;background:var(--surface);border:1px solid var(--border);
+  margin-bottom:var(--gap)}
+.v3d canvas{display:block;width:100%;height:100%;touch-action:pan-y}
+.v3d .load{position:absolute;inset:0;background:var(--surface);
+  animation:sk 1.2s ease-in-out infinite}
+.v3d .hint{position:absolute;left:0;right:0;bottom:10px;text-align:center;
+  font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--dim);pointer-events:none}
+
 /* Оятқыш дыбысының тізімі */
 .snd{display:flex;align-items:center;gap:13px;width:100%;text-align:left;
   padding:14px var(--card-pad);margin-bottom:8px;background:var(--surface);
@@ -872,6 +883,11 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.6)}
             <span class="t-sub">Санау мен жаттығу атауы</span></div>
           <button class="sw" id="st-voice"><i></i></button>
         </div>
+        <div class="row">
+          <div class="t-txt"><div class="t-name">3D анимация</div>
+            <span class="t-sub">Өшірсең — схемалық SVG нұсқасы</span></div>
+          <button class="sw" id="st-d3"><i></i></button>
+        </div>
       </div>
 
       <div class="card">
@@ -1186,7 +1202,7 @@ const PRG = {
   REST_MIN: 15,              // ең қысқа демалыс
   SEC_PER_REP: 3,            // ұзақтықты шамалау үшін
   BODY_COUNT: [8, 10, 12, 14, 14],   // аптадағы жаттығу саны
-  BODY_POOL: [14, 16, 18, 20, 20],   // ашық жаттығулар саны
+  BODY_POOL: [14, 16, 18, 20, 22],   // ашық жаттығулар саны (соңғы 2-еуі — тек демалыс күні)
   FACE_COUNT: [6, 6, 7, 7, 7],       // бетте жүктеме сет пен секундпен өседі
   FACE_POOL: [8, 10, 12, 14, 14],
   FACE_SETS: [2, 2, 3, 3, 3],        // аптадағы сет саны
@@ -1250,7 +1266,7 @@ function emptyState() {
     totalMin: 0,
     photoSeen: '',                    // баннер жабылған күн
     settings: { sound: true, vibro: true, voice: true, notif: false, photo: true,
-      rtime: '08:00' },
+      d3: true, rtime: '08:00' },
     alarm: { time: '07:00', days: [1, 2, 3, 4, 5], on: false, math: true, lastFire: '',
       sound: 'classic', peak: 1, ramp: 'normal', vibro: true }
   };
@@ -1905,6 +1921,32 @@ const BODY = [
     bad: [P(REVSIT, { hp: [74, 74] }), P(REVSIT, { hp: [80, 84], eL: [30, 70], eR: [32, 72] })]
   },
   {
+    id: 'bicycle', name: 'Велосипед (қиғаш пресс)', say: 'Велосипед',
+    type: 'reps', base: 10, group: 'іш',
+    tip: 'Шалқаңнан жат, қолды шекеге қой, аяқты еденнен көтер. Бір тізені кеудеге тартып, қарама-қарсы иықты соған қарай бұр. Аяқты велосипед тепкендей кезектестір.',
+    err: 'Қате: қолмен басты тарту және тым жылдам сермеу. Бұрылыс иықтан басталсын, шынтақтан емес.',
+    short: 'Басты тартпа, иықтан бұрыл',
+    ok: [P(LIE, { hd: [28, 74], nk: [38, 78], kL: [80, 66], fL: [68, 58], kR: [94, 86],
+      fR: [112, 88], eL: [40, 68], hL: [32, 72], eR: [42, 70], hR: [34, 74] }),
+      P(LIE, { hd: [28, 74], nk: [38, 78], kR: [80, 68], fR: [68, 60], kL: [94, 84],
+        fL: [112, 86], eL: [40, 68], hL: [32, 72], eR: [42, 70], hR: [34, 74] })],
+    bad: [P(LIE, { hd: [34, 86], nk: [42, 84], kL: [80, 68], fL: [68, 60], kR: [94, 86],
+      fR: [112, 88], eL: [38, 82], hL: [32, 88], eR: [40, 84], hR: [34, 90] }),
+      P(LIE, { hd: [36, 88], nk: [44, 86], hp: [72, 78], kR: [80, 70], fR: [68, 62],
+        kL: [94, 84], fL: [112, 86], eL: [40, 84], hL: [34, 90], eR: [42, 86],
+        hR: [36, 92] })]
+  },
+  {
+    id: 'burpee', name: 'Бурпи (толық дене)', say: 'Бурпи',
+    type: 'reps', base: 5, group: 'бүкіл дене',
+    tip: 'Отыра қалып, алақанды еденге қой да, аяқты артқа лақтырып планкаға түс. Қайта жинап, тік секіріп қолды жоғары көтер. Әр фазада денең түзу қалсын.',
+    err: 'Қате: планка фазасында бел салбырайды, ал секіргенде тізе бүгілмей түседі. Шаршағанда жылдамдықты азайт, қалыпты бұзба.',
+    short: 'Бел салбырамасын, жұмсақ түс',
+    ok: [P(STAND, { eL: [48, 30], hL: [46, 12], eR: [72, 30], hR: [74, 12] }), PLANK],
+    bad: [P(STAND, { hd: [58, 22], eL: [50, 40], hL: [48, 26], eR: [70, 40], hR: [72, 26] }),
+      P(PLANK, { hp: [72, 86], nk: [36, 66] })]
+  },
+  {
     id: 'catcow', name: 'Мысық-сиыр (арқа созылу)', say: 'Мысық сиыр',
     type: 'reps', base: 8, group: 'созылу',
     tip: 'Төрттағандап тұрып, дем шығара арқаны жоғары дөңгелет, иекті кеудеге тарт. Дем ала белді баяу майыстырып, кеудені аш. Баяу әрі тегіс жаса.',
@@ -1939,6 +1981,32 @@ const BODY = [
     bad: [P(STAND, { eL: [48, 30], hL: [46, 12], eR: [70, 52], hR: [64, 62] }),
       { hd: [54, 40], nk: [57, 46], hp: [62, 66], kL: [54, 88], fL: [52, 110], kR: [70, 88],
         fR: [72, 110], eL: [48, 44], hL: [42, 34], eR: [68, 56], hR: [64, 66] }]
+  },
+  /* Соңғы екеуі — тек демалыс күндері үшін (қалыпты күндердің пулына кірмейді) */
+  {
+    id: 'neckstretch', name: 'Мойын созу', say: 'Мойын созу',
+    type: 'time', base: 20, group: 'созылу',
+    tip: 'Тік отыр немесе тұр, иықты түсір. Басты бір жаққа баяу еңкейтіп, алақанмен жеңіл қолдау бер. 20 секунд ұстап, екінші жаққа ауыстыр.',
+    err: 'Қате: басты күшпен тарту және қарсы иықты көтеру. Созылу жағымды сезілуі керек, ауырмауы тиіс.',
+    short: 'Қарсы иықты көтерме',
+    ok: [P(STAND, { eL: [47, 40], hL: [52, 22], eR: [73, 46], hR: [77, 62] }),
+      { hd: [55, 20], nk: [60, 32], hp: [60, 64], kL: [52, 86], fL: [50, 110], kR: [68, 86],
+        fR: [70, 110], eL: [47, 38], hL: [56, 20], eR: [73, 46], hR: [77, 62] }],
+    bad: [P(STAND, { eL: [47, 40], hL: [52, 22], eR: [73, 46], hR: [77, 62] }),
+      { hd: [53, 18], nk: [59, 28], hp: [60, 64], kL: [52, 86], fL: [50, 110], kR: [68, 86],
+        fR: [70, 110], eL: [46, 34], hL: [54, 16], eR: [72, 36], hR: [76, 50] }]
+  },
+  {
+    id: 'armstretch', name: 'Қол созу', say: 'Қол созу',
+    type: 'time', base: 20, group: 'созылу',
+    tip: 'Бір қолды кеуде тұсынан көлденең соз, екінші қолмен шынтақтан жеңіл тарт. Иықты түсіріп, денені бұрма. 20 секундтан кейін қолды ауыстыр.',
+    err: 'Қате: иықты құлаққа көтеру немесе денені бұрып жіберу. Тек қол қозғалады, кеуде алға қарап тұрады.',
+    short: 'Иықты көтерме, дене бұрылмасын',
+    ok: [P(STAND, { eL: [52, 46], hL: [72, 46], eR: [66, 48], hR: [56, 46] }),
+      P(STAND, { eL: [54, 44], hL: [76, 44], eR: [68, 46], hR: [58, 44] })],
+    bad: [P(STAND, { nk: [60, 30], eL: [52, 38], hL: [72, 38], eR: [66, 40], hR: [56, 38] }),
+      P(STAND, { hd: [56, 20], nk: [58, 32], eL: [50, 36], hL: [70, 34], eR: [64, 38],
+        hR: [54, 36] })]
   }
 ];
 
@@ -2329,7 +2397,8 @@ function pickBalanced2(pool, count, seed) {
 }
 /* Демалыс күні: тек созылу / релаксация, 3 минут */
 function restDayPlan(program, day) {
-  const ids = (program === 'face') ? ['relax', 'neck', 'oval'] : ['catcow', 'stretch', 'sidestretch'];
+  const ids = (program === 'face') ? ['relax', 'neck', 'oval']
+    : ['neckstretch', 'armstretch', 'catcow'];
   const src = (program === 'face') ? FACE : BODY;
   const items = ids.map((id) => src.filter((e) => e.id === id)[0])
     .filter(Boolean).slice(0, PRG.REST_DAY_N)
@@ -2823,6 +2892,7 @@ function loadWork(st) {
   $('#r-name').textContent = it.ex.name + (it.sets > 1 ? ' · ' + it.set + '/' + it.sets + ' сет' : '');
   $('#r-metric').innerHTML = newBadge(it) + metricText(it);
   $('#r-visual').innerHTML = stepVisual(it);
+  mount3D(clipFor(it, false));            // сәтсіз болса SVG орнында қалады
   $('#r-instr').innerHTML = stepInstr(it);
   $('#r-next').textContent = nextLabel();
   $('#r-done').innerHTML = (it.type === 'reps')
@@ -2834,6 +2904,7 @@ function loadRest(st) {
   $('#r-name').textContent = 'Демалыс';
   $('#r-metric').innerHTML = newBadge(nx) + metricText(nx) + ' · КЕЛЕСІ';
   $('#r-visual').innerHTML = stepVisual(nx);
+  mount3D(clipFor(nx, true));             // демалыс аралығында — idle
   $('#r-instr').innerHTML = '<div class="nxt"><span class="label">Келесі жаттығу</span>' +
     '<div class="t-name">' + nx.ex.name + '</div>' +
     '<span class="t-sub">' + nx.ex.tip.split('.')[0] + '.</span></div>';
@@ -2912,18 +2983,19 @@ function togglePause() {
   $('#r-pause').innerHTML = Run.paused
     ? ico('play', 'i-solid') + 'Жалғастыру' : ico('pause') + 'Пауза';
   if (Run.paused) Voice.stop();
+  pause3D(Run.paused);
   buzz();
 }
 function stopRun(ask) {
   if (ask && !confirm('Прогресс сақталмайды. Шығасың ба?')) return;
   clearInterval(Run.timer); Run.timer = null;
-  Voice.stop(); keepAwake(false);
+  Voice.stop(); keepAwake(false); unmount3D();
   $('#ov-run').classList.remove('show');
 }
 /* ---------- Күннің аяқталуы ---------- */
 function finishRun() {
   clearInterval(Run.timer); Run.timer = null;
-  keepAwake(false);
+  keepAwake(false); unmount3D();
   const min = Math.max(1, Math.round((Date.now() - Run.startedAt) / 60000));
   const kcal = Math.round(min * PRG.KCAL[Run.program]);
   const streak = completeDay(Run.program, Run.day, min, kcal, Run.repeat);
@@ -3079,7 +3151,7 @@ function dismissAlarm() {
    12) БАПТАУЛАР, ЭКСПОРТ / ИМПОРТ, ЕСКЕ САЛУ
    ========================================================================= */
 function renderSettings() {
-  ['sound', 'vibro', 'voice', 'notif', 'photo'].forEach((k) =>
+  ['sound', 'vibro', 'voice', 'notif', 'photo', 'd3'].forEach((k) =>
     $('#st-' + k).classList.toggle('on', !!S.settings[k]));
   $('#st-rtime').value = S.settings.rtime;
   $('#st-notif-sub').textContent = S.settings.notif
@@ -3100,6 +3172,7 @@ function toggleSetting(key) {
   S.settings[key] = !S.settings[key];
   if (key === 'notif' && S.settings[key]) return askNotify();
   saveState(); renderSettings(); buzz();
+  if (key === 'd3' && !S.settings.d3) unmount3D();      // бірден SVG-ге қайтамыз
   if (key === 'sound' && S.settings.sound) Sound.beep(CFG.BEEP_HI, 140);
 }
 /* Хабарламаға рұқсат сұрау */
@@ -3676,7 +3749,259 @@ function importBundle(data) {
 }
 
 /* =========================================================================
-   15) ІСКЕ ҚОСУ ЖӘНЕ ОҚИҒАЛАРДЫ БАЙЛАУ
+   15) 3D КӨРІНІС — three.js, жергілікті файлдан (CDN жоқ).
+   WebGL жоқ / GLB жүктелмеді / FPS төмен болса — үнсіз SVG-ге қайтады.
+   SVG нұсқасы әрқашан орнында тұрады, 3D тек оның үстіне қойылады.
+   ========================================================================= */
+const V3D = {
+  LIBS: ['js/three.min.js', 'js/GLTFLoader.js'],
+  MODEL: 'models/athlete.glb',
+  /* Жаттығу id -> клип аты. Тізімде жоқтары SVG нұсқасында қалады. */
+  CLIPS: { squat: 'squat', pushup: 'pushup', plank: 'plank',
+    jump: 'jumpingjacks', crunch: 'circlecrunch', burpee: 'burpee',
+    bicycle: 'bicyclecrunch', neckstretch: 'stretchneck', armstretch: 'stretcharm' },
+  REST: 'idle',
+  STATIC: ['plank'],         // фигура қатып тұрады, оның орнына камера айналады
+  FADE: 0.4,
+  IDLE_MS: 4000,             // қол тимесе — автоайналуға оралу
+  SPIN: 0.22,                // автоайналу (рад/сек)
+  DRAG_K: 0.009,
+  FRICTION: 0.92,
+  FPS_MIN: 30, FPS_WIN: 60,
+  MAX_DPR: 2,
+  CAM: { fov: 35, pos: [0, 1.45, 4.0], look: [0, 0.85, 0] },
+  want: null
+};
+let g3 = null;                       // сахна күйі
+let libPromise = null, modelPromise = null, gltfModel = null;
+let d3Off = false, webglOk = null;
+
+function hasWebGL() {
+  if (webglOk !== null) return webglOk;
+  try {
+    const c = document.createElement('canvas');
+    webglOk = !!(window.WebGLRenderingContext &&
+      (c.getContext('webgl') || c.getContext('experimental-webgl')));
+  } catch (e) { webglOk = false; }
+  return webglOk;
+}
+function can3D() { return !!S.settings.d3 && !d3Off && hasWebGL(); }
+
+/* Қадамға сай клип (болмаса null — SVG қалады) */
+function clipFor(it, isRest) {
+  if (Run.program !== 'body') return null;         // бет жаттығулары SVG-де
+  if (isRest) return V3D.REST;
+  return (it && V3D.CLIPS[it.ex.id]) || null;
+}
+/* ---------- Жалқау жүктеу ---------- */
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.async = false;
+    s.onload = res;
+    s.onerror = () => rej(new Error('жүктелмеді: ' + src));
+    document.head.appendChild(s);
+  });
+}
+function ensureLibs() {
+  if (!libPromise) {
+    libPromise = V3D.LIBS.reduce((ch, src) => ch.then(() => loadScript(src)),
+      Promise.resolve());
+  }
+  return libPromise;
+}
+function ensureModel() {
+  if (!modelPromise) {
+    modelPromise = new Promise((res, rej) => {
+      new THREE.GLTFLoader().load(V3D.MODEL, res, null,
+        () => rej(new Error('GLB жүктелмеді')));
+    }).then((gltf) => { gltfModel = gltf; return gltf; });
+  }
+  return modelPromise;
+}
+/* ---------- Сахна ---------- */
+function build3D() {
+  const cv = document.createElement('canvas');
+  const r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true });
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, V3D.MAX_DPR));
+  if ('outputEncoding' in r && THREE.sRGBEncoding) r.outputEncoding = THREE.sRGBEncoding;
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(V3D.CAM.fov, 1, 0.1, 50);
+  cam.position.set(V3D.CAM.pos[0], V3D.CAM.pos[1], V3D.CAM.pos[2]);
+  cam.lookAt(V3D.CAM.look[0], V3D.CAM.look[1], V3D.CAM.look[2]);
+  addLights(scene);
+  const group = new THREE.Group();
+  group.add(shadowMesh());
+  scene.add(group);
+  return { cv: cv, r: r, scene: scene, cam: cam, group: group,
+    clock: new THREE.Clock(), mixer: null, actions: {}, cur: null,
+    rot: 0, vel: 0, spin: 0, last: 0, drag: false, static: false,
+    frames: 0, t0: 0, raf: null, fadeTimer: null };
+}
+/* Ақ жарық жоғарыдан + лайм контур артынан */
+function addLights(scene) {
+  scene.add(new THREE.AmbientLight(0x5a5a62, 0.9));
+  const key = new THREE.DirectionalLight(0xffffff, 2.1);
+  key.position.set(1.2, 3.4, 2.6);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0xd9f24e, 3.2);
+  rim.position.set(-2.6, 1.5, -1.4);        // артынан әрі бүйірден — контур үшін
+  scene.add(rim);
+}
+/* Еденсіз жұмсақ эллипс көлеңке */
+function shadowMesh() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const c = cv.getContext('2d');
+  const g = c.createRadialGradient(64, 64, 0, 64, 64, 62);
+  g.addColorStop(0, 'rgba(0,0,0,0.5)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, 128, 128);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.15),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv),
+      transparent: true, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = 0.01;
+  return m;
+}
+/* Материалды таза силуэтке ауыстыру */
+function setupModel(gltf) {
+  gltf.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = new THREE.MeshStandardMaterial({ color: 0xE4E4E7,
+      roughness: 0.6, metalness: 0 });
+    o.frustumCulled = false;
+  });
+  g3.group.add(gltf.scene);
+  g3.mixer = new THREE.AnimationMixer(gltf.scene);
+  gltf.animations.forEach((c) => { g3.actions[c.name] = g3.mixer.clipAction(c); });
+}
+/* ---------- Клип ауыстыру ---------- */
+function setClip(name) {
+  const next = g3.actions[name];
+  if (!next || g3.cur === next) return;
+  clearTimeout(g3.fadeTimer);
+  g3.mixer.timeScale = 1;
+  next.reset();
+  next.setLoop(THREE.LoopRepeat, Infinity);
+  next.enabled = true;
+  next.setEffectiveWeight(1);
+  next.play();
+  if (g3.cur) g3.cur.crossFadeTo(next, V3D.FADE, false);
+  g3.cur = next;
+  g3.static = V3D.STATIC.indexOf(name) >= 0;
+  if (g3.static) g3.fadeTimer = setTimeout(() => { g3.mixer.timeScale = 0; },
+    V3D.FADE * 1000);
+}
+function pause3D(on) {
+  if (!g3 || !g3.mixer) return;
+  g3.mixer.timeScale = (on || g3.static) ? 0 : 1;
+}
+/* ---------- Рендер циклі ---------- */
+function tick3D() {
+  if (!g3) return;
+  g3.raf = requestAnimationFrame(tick3D);
+  const dt = g3.clock.getDelta();
+  if (document.hidden) return;                 // фонда рендер жоқ
+  if (g3.mixer) g3.mixer.update(dt);
+  spin3D(dt);
+  g3.r.render(g3.scene, g3.cam);
+  watchFPS();
+}
+function spin3D(dt) {
+  const idle = (Date.now() - g3.last) > V3D.IDLE_MS;
+  if (!g3.drag && Math.abs(g3.vel) > 0.0002) {
+    g3.rot = clamp(g3.rot + g3.vel, -Math.PI, Math.PI);
+    g3.vel *= V3D.FRICTION;
+  } else if (!g3.drag && (idle || g3.static)) {
+    g3.spin += V3D.SPIN * dt;
+  }
+  g3.group.rotation.y = g3.rot + g3.spin;
+}
+/* 60 кадр бойы FPS 30-дан төмен болса — SVG-ге ауысамыз */
+function watchFPS() {
+  const now = performance.now();
+  if (!g3.t0) { g3.t0 = now; g3.frames = 0; return; }
+  g3.frames++;
+  if (g3.frames < V3D.FPS_WIN) return;
+  const fps = g3.frames * 1000 / (now - g3.t0);
+  g3.frames = 0; g3.t0 = now;
+  if (fps >= V3D.FPS_MIN) return;
+  console.info('FitDay: FPS ' + fps.toFixed(0) + ' — SVG нұсқасына ауысты');
+  d3Off = true;
+  unmount3D();
+}
+/* ---------- Сүйреу: тек көлденең, ±180°, инерциямен ---------- */
+function bindDrag(cv) {
+  let x0 = null;
+  cv.addEventListener('pointerdown', (e) => {
+    x0 = e.clientX; g3.drag = true; g3.vel = 0; g3.last = Date.now();
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* қолдамайды */ }
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0;
+    x0 = e.clientX;
+    g3.vel = dx * V3D.DRAG_K;
+    g3.rot = clamp(g3.rot + g3.vel, -Math.PI, Math.PI);
+    g3.last = Date.now();
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) =>
+    cv.addEventListener(ev, () => { x0 = null; g3.drag = false; g3.last = Date.now(); }));
+}
+/* ---------- Орнату / алу ---------- */
+function mount3D(clip) {
+  const host = $('#r-visual');
+  if (!host || !clip || !can3D()) return;
+  V3D.want = clip;
+  const box = openBox(host);
+  ensureLibs().then(ensureModel).then(() => attach3D(box, clip))
+    .catch((e) => {
+      d3Off = true;
+      closeBox(host);
+      console.info('FitDay 3D: ' + (e && e.message ? e.message : e));
+    });
+}
+function openBox(host) {
+  const box = document.createElement('div');
+  box.className = 'v3d';
+  box.innerHTML = '<div class="load"></div>';
+  host.insertBefore(box, host.firstChild);
+  const fig = $('.fig', host);
+  if (fig) fig.style.display = 'none';
+  return box;
+}
+function closeBox(host) {
+  const box = $('.v3d', host);
+  if (box && box.parentNode) box.parentNode.removeChild(box);
+  const fig = $('.fig', host);
+  if (fig) fig.style.display = '';
+}
+function attach3D(box, clip) {
+  if (V3D.want !== clip || !box.parentNode) return;   // қадам ауысып кетті
+  if (!g3) { g3 = build3D(); setupModel(gltfModel); bindDrag(g3.cv); }
+  box.innerHTML = '<div class="hint">Саусақпен айналдыр</div>';
+  box.insertBefore(g3.cv, box.firstChild);
+  resize3D(box);
+  setClip(clip);
+  g3.last = Date.now();
+  if (!g3.raf) { g3.clock.getDelta(); tick3D(); }
+}
+function resize3D(box) {
+  const w = box.clientWidth || 320;
+  g3.r.setSize(w, w, false);
+  g3.cam.aspect = 1;
+  g3.cam.updateProjectionMatrix();
+}
+function unmount3D() {
+  if (g3 && g3.raf) { cancelAnimationFrame(g3.raf); g3.raf = null; }
+  const host = $('#r-visual');
+  if (host) closeBox(host);
+}
+
+/* =========================================================================
+   16) ІСКЕ ҚОСУ ЖӘНЕ ОҚИҒАЛАРДЫ БАЙЛАУ
    ========================================================================= */
 function bindNav() {
   $$('[data-nav]').forEach((b) => b.addEventListener('click', () => nav(b.dataset.nav)));
@@ -3736,7 +4061,7 @@ function bindChips(sel, apply) {
   }));
 }
 function bindSettings() {
-  ['sound', 'vibro', 'voice', 'notif', 'photo'].forEach((k) =>
+  ['sound', 'vibro', 'voice', 'notif', 'photo', 'd3'].forEach((k) =>
     $('#st-' + k).addEventListener('click', () => toggleSetting(k)));
   $('#st-rtime').addEventListener('change', (e) => {
     S.settings.rtime = e.target.value || '08:00'; saveState(); renderSettings();
@@ -3812,6 +4137,13 @@ function bindCompare() {
   $('#cmp-make').addEventListener('click', makeShareImage);
   initWipe();
 }
+/* Экран өлшемі өзгергенде канвасты қайта есептеу */
+function bind3D() {
+  window.addEventListener('resize', () => {
+    const box = $('#r-visual .v3d');
+    if (g3 && box) resize3D(box);
+  });
+}
 /* Секунд сайынғы жалпы сағат: оятқыш пен еске салу */
 function startClock() {
   setInterval(() => {
@@ -3862,7 +4194,7 @@ function init() {
   S = loadState();
   grantFreeze();
   saveState();
-  bindNav(); bindRunner(); bindAlarm(); bindSettings(); bindPhotos();
+  bindNav(); bindRunner(); bindAlarm(); bindSettings(); bindPhotos(); bind3D();
   initSwipe(); initVoices(); initInstall(); initSW();
   loadPhotos();                    // еске салу баннері үшін фотоларды оқып қоямыз
   renderAll(); renderFace(); renderAlarm();

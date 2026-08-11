@@ -1,5 +1,5 @@
 /* FitDay service worker — офлайн жұмыс үшін кэш */
-const CACHE = 'fitday-v5';   // оятқыштың 6 дауысы — ескі кэш ауыстырылады
+const CACHE = 'fitday-v6';   // 3D көрінісі қосылды — ескі кэш ауыстырылады
 
 /* Қосымшаның қаңқасы (app shell) */
 const ASSETS = [
@@ -9,7 +9,10 @@ const ASSETS = [
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
-  './icon-maskable.png'
+  './icon-maskable.png',
+  './js/three.min.js',
+  './js/GLTFLoader.js',
+  './models/athlete.glb'
 ];
 
 /* Орнату: барлық файлды кэшке саламыз (біреуі жоқ болса да құламайды) */
@@ -43,6 +46,7 @@ self.addEventListener('fetch', (e) => {
 function fetchAndCache(req) {
   return fetch(req)
     .then((res) => {
+      if (!res || !res.ok) return res;          // 404-ті кэштемейміз
       const copy = res.clone();
       caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
       return res;
