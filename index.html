@@ -413,6 +413,17 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.6)}
 .fig .bad.solid{fill:var(--danger);stroke:var(--danger);stroke-width:3}
 .fig .ghost{opacity:0.35}
 
+/* Еденде жасалатын қалыптар: жіңішке сызық, еден сызығы, контурлы «елес» */
+.fig.floor .ok,.fig.floor .bad{stroke-width:5;vector-effect:non-scaling-stroke}
+.fig.floor .ok.solid{stroke-width:2.5;vector-effect:non-scaling-stroke}
+.fig.floor .halo{fill:none;stroke:var(--surface);stroke-width:9.5;
+  stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.fig.floor .halo-c{fill:var(--surface);stroke:none}
+.fig.floor .ground{stroke:var(--border);stroke-width:1.5;stroke-linecap:round;
+  vector-effect:non-scaling-stroke}
+.fig.floor .ghost{opacity:0.5}
+.fig.floor .bad,.fig.floor .bad.solid{fill:none;stroke-dasharray:5 4;stroke-width:3.5}
+
 .fig.face svg{max-width:190px}
 /* Бет сызбасы */
 .f-line{fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
@@ -1710,14 +1721,16 @@ const PLANK = { hd: [24, 58], nk: [36, 62], hp: [72, 68], kL: [88, 72], fL: [106
   kR: [88, 74], fR: [106, 80], eL: [34, 78], hL: [26, 90], eR: [36, 78], hR: [28, 90] };
 const PUSH = { hd: [24, 54], nk: [36, 58], hp: [72, 66], kL: [88, 72], fL: [106, 80],
   kR: [88, 74], fR: [106, 82], eL: [36, 74], hL: [36, 90], eR: [38, 74], hR: [38, 90] };
-const LIE = { hd: [24, 80], nk: [36, 82], hp: [72, 84], kL: [92, 84], fL: [108, 86],
-  kR: [92, 86], fR: [108, 88], eL: [46, 88], hL: [58, 90], eR: [46, 90], hR: [58, 92] };
-const PRONE = { hd: [26, 76], nk: [38, 78], hp: [74, 82], kL: [90, 84], fL: [106, 86],
-  kR: [90, 86], fR: [106, 88], eL: [26, 80], hL: [14, 82], eR: [26, 82], hR: [14, 84] };
+/* Жатқан қалыптарда бас мойынмен көтеріңкі, қол дене силуэтінің сыртында —
+   әйтпесе бәрі бір дақ болып қосылып кетеді. */
+const LIE = { hd: [20, 72], nk: [36, 80], hp: [72, 84], kL: [92, 84], fL: [108, 86],
+  kR: [92, 86], fR: [108, 88], eL: [48, 95], hL: [62, 97], eR: [48, 97], hR: [62, 99] };
+const PRONE = { hd: [22, 68], nk: [38, 76], hp: [74, 82], kL: [90, 84], fL: [106, 86],
+  kR: [90, 86], fR: [106, 88], eL: [26, 78], hL: [12, 80], eR: [26, 80], hR: [12, 82] };
 const QUAD = { hd: [28, 50], nk: [40, 54], hp: [76, 58], kL: [78, 80], fL: [92, 90],
   kR: [78, 82], fR: [92, 92], eL: [42, 74], hL: [42, 92], eR: [44, 76], hR: [44, 92] };
-const REVSIT = { hd: [46, 40], nk: [50, 50], hp: [64, 70], kL: [86, 72], fL: [98, 92],
-  kR: [86, 74], fR: [98, 94], eL: [40, 62], hL: [34, 88], eR: [42, 64], hR: [36, 90] };
+const REVSIT = { hd: [48, 28], nk: [52, 42], hp: [60, 66], kL: [88, 68], fL: [96, 92],
+  kR: [88, 70], fR: [96, 94], eL: [40, 56], hL: [34, 90], eR: [42, 58], hR: [36, 92] };
 const WALL = { hd: [72, 34], nk: [72, 46], hp: [72, 74], kL: [42, 74], fL: [42, 102],
   kR: [44, 76], fR: [44, 104], eL: [62, 58], hL: [52, 68], eR: [64, 60], hR: [54, 70] };
 const SIDEP = { hd: [26, 42], nk: [36, 48], hp: [72, 70], kL: [92, 82], fL: [106, 92],
@@ -1831,9 +1844,11 @@ const BODY = [
     tip: 'Шалқаңнан жат, қолды бүйірге қой, бел еденге жабысып тұрсын. Түзу аяқты баяу көтеріп, баяу түсір. Көтерерде дем шығар.',
     err: 'Қате: бел еденнен көтеріліп, тізе бүгіледі. Ауыр болса тізені сәл бүгіп, амплитуданы қысқарт.',
     short: 'Бел еденге жабысып тұрсын',
-    ok: [LIE, P(LIE, { kL: [86, 64], fL: [92, 44], kR: [88, 66], fR: [94, 46] })],
-    bad: [LIE, P(LIE, { nk: [36, 78], hp: [72, 74], kL: [86, 70], fL: [78, 58], kR: [88, 72],
-      fR: [80, 60] })]
+    ok: [P(LIE, { kL: [94, 76], fL: [108, 68], kR: [94, 78], fR: [108, 70] }),
+      P(LIE, { kL: [86, 62], fL: [90, 42], kR: [88, 64], fR: [92, 44] })],
+    bad: [P(LIE, { kL: [94, 76], fL: [108, 68], kR: [94, 78], fR: [108, 70] }),
+      P(LIE, { nk: [36, 74], hp: [72, 74], kL: [84, 68], fL: [74, 54], kR: [86, 70],
+        fR: [76, 56] })]
   },
   {
     id: 'mountain', name: 'Альпинист', say: 'Альпинист',
@@ -1916,9 +1931,11 @@ const BODY = [
     tip: 'Қолды артқа тіреп отыр, саусақ денеге қарасын. Шынтақты артқа бүгіп, жамбасты еденге жақындат. Иықты құлаққа көтерме.',
     err: 'Қате: шынтақ жанға жайылып, жамбас қолдан тым алыс кетеді — иыққа артық күш түседі.',
     short: 'Шынтақ артқа, иық түсулі',
-    ok: [REVSIT, P(REVSIT, { hd: [46, 50], nk: [50, 60], hp: [64, 82], eL: [38, 74],
-      eR: [40, 76] })],
-    bad: [P(REVSIT, { hp: [74, 74] }), P(REVSIT, { hp: [80, 84], eL: [30, 70], eR: [32, 72] })]
+    ok: [REVSIT, P(REVSIT, { hd: [48, 42], nk: [52, 56], hp: [60, 80], kL: [88, 78],
+      kR: [88, 80], eL: [38, 68], eR: [40, 70] })],
+    bad: [P(REVSIT, { hp: [72, 68], kL: [94, 70], kR: [94, 72] }),
+      P(REVSIT, { hd: [54, 40], hp: [76, 82], kL: [96, 80], kR: [96, 82],
+        eL: [32, 64], eR: [34, 66] })]
   },
   {
     id: 'bicycle', name: 'Велосипед (қиғаш пресс)', say: 'Велосипед',
@@ -1926,15 +1943,15 @@ const BODY = [
     tip: 'Шалқаңнан жат, қолды шекеге қой, аяқты еденнен көтер. Бір тізені кеудеге тартып, қарама-қарсы иықты соған қарай бұр. Аяқты велосипед тепкендей кезектестір.',
     err: 'Қате: қолмен басты тарту және тым жылдам сермеу. Бұрылыс иықтан басталсын, шынтақтан емес.',
     short: 'Басты тартпа, иықтан бұрыл',
-    ok: [P(LIE, { hd: [28, 74], nk: [38, 78], kL: [80, 66], fL: [68, 58], kR: [94, 86],
-      fR: [112, 88], eL: [40, 68], hL: [32, 72], eR: [42, 70], hR: [34, 74] }),
-      P(LIE, { hd: [28, 74], nk: [38, 78], kR: [80, 68], fR: [68, 60], kL: [94, 84],
-        fL: [112, 86], eL: [40, 68], hL: [32, 72], eR: [42, 70], hR: [34, 74] })],
-    bad: [P(LIE, { hd: [34, 86], nk: [42, 84], kL: [80, 68], fL: [68, 60], kR: [94, 86],
-      fR: [112, 88], eL: [38, 82], hL: [32, 88], eR: [40, 84], hR: [34, 90] }),
-      P(LIE, { hd: [36, 88], nk: [44, 86], hp: [72, 78], kR: [80, 70], fR: [68, 62],
-        kL: [94, 84], fL: [112, 86], eL: [40, 84], hL: [34, 90], eR: [42, 86],
-        hR: [36, 92] })]
+    ok: [P(LIE, { hd: [24, 66], nk: [38, 76], kL: [78, 62], fL: [64, 54], kR: [96, 86],
+      fR: [112, 88], eL: [44, 58], hL: [33, 57], eR: [46, 60], hR: [35, 59] }),
+      P(LIE, { hd: [24, 66], nk: [38, 76], kR: [78, 64], fR: [64, 56], kL: [96, 84],
+        fL: [112, 86], eL: [44, 58], hL: [33, 57], eR: [46, 60], hR: [35, 59] })],
+    bad: [P(LIE, { hd: [30, 78], nk: [40, 80], kL: [78, 64], fL: [64, 56], kR: [96, 86],
+      fR: [112, 88], eL: [40, 72], hL: [30, 78], eR: [42, 74], hR: [32, 80] }),
+      P(LIE, { hd: [32, 80], nk: [42, 82], hp: [72, 78], kR: [78, 66], fR: [64, 58],
+        kL: [96, 84], fL: [112, 86], eL: [42, 74], hL: [32, 80], eR: [44, 76],
+        hR: [34, 82] })]
   },
   {
     id: 'burpee', name: 'Бурпи (толық дене)', say: 'Бурпи',
@@ -2222,33 +2239,127 @@ function bone(a1, a2, b1, b2, cls) {
   return animEl('line', { class: cls, x1: a1[0], y1: a1[1], x2: a2[0], y2: a2[1] },
     { x1: [a1[0], b1[0]], y1: [a1[1], b1[1]], x2: [a2[0], b2[0]], y2: [a2[1], b2[1]] });
 }
-function bones(A, B, cls) {
+/* Бір сүйек. halo=true болса, астына фон түсті кең сызық қойылады —
+   кейін сызылған мүше алдыңғысын «кесіп» өтеді де, қайсысы алда екені көрінеді. */
+function boneEl(a1, a2, b1, b2, cls, halo) {
+  const line = bone(a1, a2, b1, b2, cls);
+  return halo ? bone(a1, a2, b1, b2, 'halo') + line : line;
+}
+function bones(A, B, cls, opt) {
   const fa = frame(A), fb = frame(B);
-  let s = bone(A.hd, A.nk, B.hd, B.nk, cls);          // мойын
+  const only = opt && opt.only, halo = opt && opt.halo;
+  let s = '';
+  if ((!opt || !opt.noNeck) && (!only || only.hd || only.nk)) {
+    s += boneEl(A.hd, A.nk, B.hd, B.nk, cls, halo);
+  }
   CHAINS.forEach((ch) => {
     for (let i = 0; i < ch.length - 1; i++) {
-      s += bone(joint(A, fa, ch[i]), joint(A, fa, ch[i + 1]),
-        joint(B, fb, ch[i]), joint(B, fb, ch[i + 1]), cls);
+      if (only && !only[ch[i]] && !only[ch[i + 1]]) continue;
+      s += boneEl(joint(A, fa, ch[i]), joint(A, fa, ch[i + 1]),
+        joint(B, fb, ch[i]), joint(B, fb, ch[i + 1]), cls, halo);
     }
   });
   return s;
 }
-/* Дене силуэті: бас + кеуде/жамбас пішіні + аяқ-қол */
-function figureBody(pair, cls) {
-  const A = pair[0], B = pair[1];
-  let s = animEl('circle', { class: cls + ' solid', cx: A.hd[0], cy: A.hd[1], r: FIG.head },
-    { cx: [A.hd[0], B.hd[0]], cy: [A.hd[1], B.hd[1]] });
-  s += animEl('path', { class: cls + ' solid', d: torsoPath(A) },
+/* Бас: фон сақинасы → мойын → бас. Осы ретпен бас денеден бөлініп тұрады,
+   бірақ мойын көрініп, үзіліп қалмайды. */
+function headEl(A, B, cls, halo) {
+  const mv = { cx: [A.hd[0], B.hd[0]], cy: [A.hd[1], B.hd[1]] };
+  const ring = halo ? animEl('circle',
+    { class: 'halo-c', cx: A.hd[0], cy: A.hd[1], r: FIG.head + 1.5 }, mv) : '';
+  const neck = halo ? bone(A.hd, A.nk, B.hd, B.nk, cls) : '';
+  return ring + neck + animEl('circle',
+    { class: cls + ' solid', cx: A.hd[0], cy: A.hd[1], r: FIG.head }, mv);
+}
+function torsoEl(A, B, cls) {
+  return animEl('path', { class: cls + ' solid', d: torsoPath(A) },
     { d: [torsoPath(A), torsoPath(B)] });
-  return s + bones(A, B, cls);
+}
+/* Дене силуэті: бас + кеуде/жамбас пішіні + аяқ-қол.
+   Еденде жасалатын қалыпта бас соңында сызылады — денеден анық бөлініп тұрсын. */
+function figureBody(pair, cls, opt) {
+  const A = pair[0], B = pair[1];
+  const only = opt && opt.only;
+  if (!opt || !opt.floor) {
+    return headEl(A, B, cls, false) + torsoEl(A, B, cls) + bones(A, B, cls);
+  }
+  let s = '';
+  /* Елесте дене тұтас пішін емес — тек омыртқа сызығы. Тіктөртбұрыш
+     контуры дұрыс фигураның үстін жауып, суретті лайлайды. */
+  if (only) {
+    if (only.nk || only.hp) s += boneEl(A.nk, A.hp, B.nk, B.hp, cls, false);
+  } else {
+    s += torsoEl(A, B, cls);
+  }
+  s += bones(A, B, cls, { only: only, halo: opt.halo, noNeck: !!opt.halo });
+  if (!only || only.hd) s += headEl(A, B, cls, opt.halo);
+  return s;
+}
+/* ---------- Еденде жасалатын жаттығулар ---------- */
+const FLOOR_IDS = ['pushup', 'plank', 'bridge', 'crunch', 'superman', 'legraise',
+  'mountain', 'sideplank', 'dips', 'catcow', 'birddog', 'bicycle', 'burpee'];
+const FLOOR = { FIT: 84, PAD: 9, DIFF: 6, GROUND: 3 };
+
+function isFloorEx(ex) { return FLOOR_IDS.indexOf(ex.id) >= 0; }
+function dist2(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+
+/* Барлық қалыптың сыртқы шекарасы */
+function poseBounds(poses) {
+  let x0 = 1e4, y0 = 1e4, x1 = -1e4, y1 = -1e4;
+  poses.forEach((P) => Object.keys(P).forEach((k) => {
+    x0 = Math.min(x0, P[k][0]); x1 = Math.max(x1, P[k][0]);
+    y0 = Math.min(y0, P[k][1]); y1 = Math.max(y1, P[k][1]);
+  }));
+  return { x0: x0 - FLOOR.PAD, y0: y0 - FLOOR.PAD,
+    x1: x1 + FLOOR.PAD, y1: y1 + FLOOR.PAD, foot: y1 };
+}
+/* Фигураны кадрдың 70%-ына сыйғызып, ортасына қою */
+function fitGroup(b) {
+  const w = b.x1 - b.x0, h = b.y1 - b.y0;
+  const s = Math.min(FLOOR.FIT / w, FLOOR.FIT / h);
+  return { s: s, tx: 60 - (b.x0 + w / 2) * s, ty: 60 - (b.y0 + h / 2) * s };
+}
+/* Қате қалыптың дұрыстан айырмашылығы бар буындары ғана */
+function diffJoints(ok, bad) {
+  const out = {};
+  Object.keys(ok[0]).forEach((k) => {
+    out[k] = Math.max(dist2(ok[0][k], bad[0][k]), dist2(ok[1][k], bad[1][k])) >= FLOOR.DIFF;
+  });
+  out.shL = out.shR = out.nk;          // иық мойыннан туындайды
+  out.hpL = out.hpR = out.hp;
+  return out;
+}
+function groundLine(b) {
+  const y = (b.foot + FLOOR.GROUND).toFixed(1);
+  return '<line class="ground" x1="' + b.x0.toFixed(1) + '" y1="' + y +
+    '" x2="' + b.x1.toFixed(1) + '" y2="' + y + '"/>';
+}
+function figLabels(ex) {
+  return '<div class="flab"><span><i></i>Дұрыс</span><span class="bad"><i></i>Қате</span></div>' +
+    '<div class="fnote"><em></em>' + (ex.short || ex.err) + '</div></div>';
 }
 /* Дұрыс қалып — толық, қате қалып — «елес» болып үстіне қабаттасады */
 function exerciseVisual(ex) {
+  return isFloorEx(ex) ? floorVisual(ex) : standVisual(ex);
+}
+function standVisual(ex) {
   return '<div class="fig"><svg viewBox="0 0 120 120" aria-hidden="true">' +
     '<g class="ghost">' + figureBody(ex.bad, 'bad') + '</g>' +
-    figureBody(ex.ok, 'ok') + '</svg>' +
-    '<div class="flab"><span><i></i>Дұрыс</span><span class="bad"><i></i>Қате</span></div>' +
-    '<div class="fnote"><em></em>' + (ex.short || ex.err) + '</div></div>';
+    figureBody(ex.ok, 'ok') + '</svg>' + figLabels(ex);
+}
+/* Еденде: еден сызығы + кішірейтілген фигура + тек айырмашылықты көрсететін елес */
+function floorVisual(ex) {
+  const b = poseBounds(ex.ok);          // өлшем дұрыс қалып бойынша — елес оны шығындамасын
+  const t = fitGroup(b);
+  const g = 'translate(' + t.tx.toFixed(2) + ' ' + t.ty.toFixed(2) +
+    ') scale(' + t.s.toFixed(3) + ')';
+  return '<div class="fig floor"><svg viewBox="0 0 120 120" aria-hidden="true">' +
+    '<g transform="' + g + '">' + groundLine(b) +
+    '<g class="ghost">' +
+    figureBody(ex.bad, 'bad', { only: diffJoints(ex.ok, ex.bad), floor: true }) +
+    '</g>' +
+    figureBody(ex.ok, 'ok', { halo: true, floor: true }) +
+    '</g></svg>' + figLabels(ex);
 }
 
 /* Бет жаттығуы: жіңішке контур, қол — лайм нүкте, бағыт — жебе */
