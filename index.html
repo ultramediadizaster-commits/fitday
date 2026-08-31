@@ -889,10 +889,14 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.6)}
             <span class="t-sub">Түйме мен ауысу кезінде</span></div>
           <button class="sw" id="st-vibro"><i></i></button>
         </div>
-        <div class="row">
-          <div class="t-txt"><div class="t-name">Дауыстық сүйемелдеу</div>
-            <span class="t-sub">Санау мен жаттығу атауы</span></div>
-          <button class="sw" id="st-voice"><i></i></button>
+        <div class="row" style="display:block">
+          <div class="t-txt" style="margin-bottom:11px"><div class="t-name">Дауыс</div>
+            <span class="t-sub" id="st-voice-sub">Санау мен жаттығу атауы</span></div>
+          <div class="chips" id="st-voice" style="margin-bottom:0">
+            <button class="chip-b" data-v="rec">Жазылған</button>
+            <button class="chip-b" data-v="tts">Жүйе</button>
+            <button class="chip-b" data-v="off">Өшірулі</button>
+          </div>
         </div>
         <div class="row">
           <div class="t-txt"><div class="t-name">3D анимация</div>
@@ -1233,6 +1237,13 @@ const WDAY_FULL = ['Жексенбі', 'Дүйсенбі', 'Сейсенбі', '
 const MONTH = ['қаңтар', 'ақпан', 'наурыз', 'сәуір', 'мамыр', 'маусым',
   'шілде', 'тамыз', 'қыркүйек', 'қазан', 'қараша', 'желтоқсан'];
 const NUM_KK = ['нөл', 'бір', 'екі', 'үш', 'төрт', 'бес', 'алты', 'жеті', 'сегіз', 'тоғыз', 'он'];
+/* Дауыс режимдері: жазылған спрайт / жүйенің синтезі / өшірулі */
+const VOICE_MODES = ['rec', 'tts', 'off'];
+const VOICE_SUB = {
+  rec: 'Жазылған қазақша дауыс (voice.mp3)',
+  tts: 'Құрылғының синтездік дауысы',
+  off: 'Дауыстық сүйемелдеу өшірулі'
+};
 
 /* ---------- Қысқа көмекшілер ---------- */
 const $ = (sel, root) => (root || document).querySelector(sel);
@@ -1276,7 +1287,7 @@ function emptyState() {
     best: 0,
     totalMin: 0,
     photoSeen: '',                    // баннер жабылған күн
-    settings: { sound: true, vibro: true, voice: true, notif: false, photo: true,
+    settings: { sound: true, vibro: true, voice: 'rec', notif: false, photo: true,
       d3: true, rtime: '08:00' },
     alarm: { time: '07:00', days: [1, 2, 3, 4, 5], on: false, math: true, lastFire: '',
       sound: 'classic', peak: 1, ramp: 'normal', vibro: true }
@@ -1303,6 +1314,9 @@ function mergeState(base, saved) {
   const out = Object.assign({}, base, saved);
   out.profile = Object.assign({}, base.profile, saved.profile);
   out.settings = Object.assign({}, base.settings, saved.settings);
+  /* Ескі нұсқада «дауыс» жай ғана true/false болатын — үш нұсқаға көшіреміз */
+  if (typeof out.settings.voice === 'boolean') out.settings.voice = out.settings.voice ? 'rec' : 'off';
+  if (VOICE_MODES.indexOf(out.settings.voice) < 0) out.settings.voice = 'rec';
   out.alarm = Object.assign({}, base.alarm, saved.alarm);
   out.streak = Object.assign({}, base.streak, saved.streak);
   out.body = Object.assign({}, base.body, saved.body);
@@ -1681,12 +1695,73 @@ const AlarmVoice = {
   }
 };
 
-/* ---------- SpeechSynthesis: қазақша дауыстық сүйемелдеу ---------- */
+/* =========================================================================
+   ЖАЗЫЛҒАН ДАУЫС — audio/voice.mp3 бір файл (sprite) + audio/sprite.json.
+   Файл бір рет жүктеліп decodeAudioData арқылы буферге айналады, әр фраза
+   AudioBufferSourceNode.start(0, offset, duration) арқылы ойналады.
+   Жүктелмесе (желі жоқ / файл жоқ) — SpeechSynthesis-ке қайтамыз.
+   ========================================================================= */
+const VoiceRec = {
+  buf: null,          // декодталған дыбыс
+  map: null,          // { "count-1": [offset, duration], ... }
+  state: 'idle',      // idle | loading | ready | fail
+  node: null,         // қазір ойнап тұрған дереккөз
+  gain: null,
+
+  /* Бір рет жүктеу. Аудио контексті Sound.ready() ашқаннан кейін ғана. */
+  load() {
+    if (this.state === 'loading' || this.state === 'ready') return;
+    if (!Sound.ready()) return;
+    this.state = 'loading';
+    const ctx = Sound.ctx;
+    Promise.all([
+      fetch('./audio/sprite.json').then((r) => { if (!r.ok) throw 0; return r.json(); }),
+      fetch('./audio/voice.mp3').then((r) => { if (!r.ok) throw 0; return r.arrayBuffer(); })
+        .then((ab) => new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)))
+    ]).then((out) => {
+      this.map = out[0]; this.buf = out[1]; this.state = 'ready';
+    }).catch(() => { this.state = 'fail'; this.map = null; this.buf = null; });
+  },
+
+  has(key) { return !!(this.state === 'ready' && key && this.map && this.map[key]); },
+
+  /* Спрайттан бір фразаны ойнату. Сәтті болса true, біткенде done() шақырылады. */
+  play(key, done) {
+    if (!this.has(key) || !Sound.ready()) return false;
+    const seg = this.map[key];
+    try {
+      this.stop();
+      const ctx = Sound.ctx;
+      const src = ctx.createBufferSource();
+      const g = ctx.createGain();
+      src.buffer = this.buf;
+      g.gain.value = 1;
+      src.connect(g).connect(ctx.destination);
+      src.start(0, seg[0], seg[1]);
+      src.onended = () => {
+        if (this.node === src) { this.node = null; this.gain = null; }
+        if (done) done();
+      };
+      this.node = src; this.gain = g;
+      return true;
+    } catch (e) { return false; }
+  },
+
+  stop() {
+    if (!this.node) return;
+    try { this.node.onended = null; this.node.stop(); } catch (e) { /* аяқталып қалған */ }
+    this.node = null; this.gain = null;
+  }
+};
+
+/* ---------- Дауыстық сүйемелдеу: жазылған дауыс + SpeechSynthesis ---------- */
 const Voice = {
   pick: null,
   ok: ('speechSynthesis' in window),
 
-  /* Ең қолайлы дауысты таңдау: kk → ru → әдепкі */
+  mode() { return S.settings.voice; },
+
+  /* Ең қолайлы жүйелік дауысты таңдау: kk → ru → әдепкі */
   choose() {
     if (!this.ok) return;
     const list = window.speechSynthesis.getVoices() || [];
@@ -1695,20 +1770,136 @@ const Voice = {
       || list.find((v) => /^tr/i.test(v.lang)) || null;
   },
 
-  say(text) {
-    if (!this.ok || !S.settings.voice || !text) return;
+  /* Төменгі деңгей: бір фразаны ойнатып, біткенде done() шақыру.
+     key — sprite.json кілті (болса), text — жүйелік дауысқа мәтін. */
+  play(text, key, done) {
+    const fin = done || function () {};
+    if (this.mode() === 'off') return fin();
+    if (this.mode() === 'rec') {
+      VoiceRec.load();
+      if (VoiceRec.play(key, fin)) return;   // жазылған нұсқа бар — сол ойналды
+    }
+    this.tts(text, fin);                     // болмаса жүйеге қайтамыз
+  },
+
+  tts(text, done) {
+    const fin = done || function () {};
+    if (!this.ok || !text) return fin();
     try {
       const u = new SpeechSynthesisUtterance(text);
       if (this.pick) { u.voice = this.pick; u.lang = this.pick.lang; } else { u.lang = 'kk-KZ'; }
       u.rate = 1; u.pitch = 1; u.volume = 1;
+      let over = false;
+      const end = () => { if (!over) { over = true; fin(); } };
+      u.onend = end; u.onerror = end;
+      /* Кейбір браузерде onend келмей қалады — сақтандырғыш таймер */
+      setTimeout(end, 1000 + text.length * 90);
       window.speechSynthesis.speak(u);
-    } catch (e) { /* дауыс жоқ — үнсіз жалғастырамыз */ }
+    } catch (e) { fin(); }
   },
 
-  /* Санды қазақша айту (0–10 сөзбен) */
-  count(n) { this.say(NUM_KK[n] || String(n)); },
-  stop() { if (this.ok) { try { window.speechSynthesis.cancel(); } catch (e) {} } }
+  /* Кезексіз, дәл қазір: жаттығу аты мен сан санау (уақытқа тәуелді) */
+  say(text, key) { VoiceQ.now(text, key); },
+
+  /* Санды қазақша айту: жазылған 1–30, әйтпесе 0–10 сөзбен */
+  count(n) { this.say(NUM_KK[n] || String(n), (n >= 1 && n <= 30) ? 'count-' + n : ''); },
+
+  stop() {
+    VoiceQ.reset();
+    VoiceRec.stop();
+    if (this.ok) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+  }
 };
+
+/* =========================================================================
+   ДАУЫС КЕЗЕГІ — фразалар бірінің үстіне бірі шықпайды.
+   now()  — кезекті тазалап, бірден айтады (жаттығу аты, сан санау);
+   push() — кезекке қояды (команда фразалары), өз кезегі келгенде айтылады.
+   hold   — сан санау кезінде команда фразалары кідіреді;
+   ttl    — кезекте тым ұзақ жатып қалған фраза ескіреді де, тасталады
+            («жартысы өтті» деген сөз жаттығу біткенде айтылмас үшін).
+   ========================================================================= */
+const VoiceQ = {
+  q: [],
+  busy: false,
+  hold: false,
+
+  /* Айтылып тұрғанын үзіп, бірден сөйлейді. Кезектегілер жойылмайды —
+     олар кезегін күтеді (кезекті мүлдем тазалау — reset()). */
+  now(text, key) {
+    this.busy = false;
+    VoiceRec.stop();
+    if (Voice.ok) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+    this.start({ text: text, key: key, dead: Infinity });
+  },
+
+  push(text, key, ttl, fn) {
+    this.q.push({ text: text, key: key, fn: fn, dead: Date.now() + (ttl || 3500) });
+    this.pump();
+  },
+
+  pump() {
+    if (this.busy || this.hold) return;
+    let it = this.q.shift();
+    while (it && Date.now() > it.dead) it = this.q.shift();   // ескірген — тастаймыз
+    if (it) this.start(it);
+  },
+
+  start(it) {
+    this.busy = true;
+    Voice.play(it.text, it.key, () => {
+      this.busy = false;
+      if (it.fn) it.fn();
+      this.pump();
+    });
+  },
+
+  /* Бәрін тоқтату: пауза, шығу, қолмен өткізу */
+  reset() { this.q.length = 0; this.busy = false; this.hold = false; }
+};
+
+/* Жаттығу / бет жаттығуының id-і → жазылған фраза кілті */
+const SAY_KEY = {
+  squat: 'ex-squat', pushup: 'ex-pushup', plank: 'ex-plank', burpee: 'ex-burpee',
+  jump: 'ex-jacks', bicycle: 'ex-bicycle', crunch: 'ex-crunch', lunge: 'ex-lunge',
+  bridge: 'ex-bridge', sideplank: 'ex-sideplank', wallsit: 'ex-wallsit',
+  mountain: 'ex-mountain', legraise: 'ex-legraise', superman: 'ex-superman',
+  calf: 'ex-calf',
+  neckstretch: 'st-neck', armstretch: 'st-arm', catcow: 'st-cat',
+  stretch: 'st-fold', sidestretch: 'st-side',
+  jaw: 'fc-jawline', chin: 'fc-chin', oval: 'fc-oval', eyes: 'fc-eyes',
+  forehead: 'fc-forehead', lips: 'fc-lips', cheek: 'fc-cheeks', neck: 'fc-neck',
+  smile: 'fc-smile', temple: 'fc-temple'
+};
+
+/* Команда фразаларының мәтіні — жазылған дауыс болмаса, жүйе осыны оқиды */
+const CUE_TXT = {
+  'cmd-ready': 'Дайынсың ба?', 'cmd-start': 'Бастадық!', 'cmd-rest': 'Демал',
+  'cmd-prepare': 'Дайындал', 'cmd-next': 'Келесі жаттығу', 'cmd-half': 'Жартысы өтті',
+  'cmd-last': 'Соңғысы', 'cmd-almost': 'Аз қалды', 'cmd-good': 'Жарайсың',
+  'cmd-pause': 'Пауза', 'cmd-resume': 'Жалғастырамыз', 'cmd-breathe': 'Тыныс алуды ұмытпа',
+  'cmd-form': 'Қалыпты дұрыс ұста', 'cmd-slow': 'Асықпа, баяу жаса',
+  'fc-wash': 'Қолыңды жу', 'fc-mirror': 'Айнаға қара', 'fc-gentle': 'Жұмсақ қимылда',
+  'fc-hold': 'Ұста', 'fc-release': 'Босаңсы', 'fc-repeat': 'Тағы қайтала'
+};
+/* Статикалық («ұстап тұратын») жаттығулар — тыныс алуды еске саламыз */
+const STATIC_EX = { plank: 1, sideplank: 1, wallsit: 1 };
+/* Күш салуды қажет ететін бет жаттығулары — қарсылық көрсетілетіндері */
+const FC_EFFORT = { chin: 1, forehead: 1, brow: 1, tongue: 1 };
+
+const CUE_MAX = 3;       // бір қадамда ең көбі 3 команда фразасы
+const CUE_MID_MAX = 2;   // соның ішінде «орта тұстағылар» — 2 (соңғысына орын қалсын)
+
+/* Команда фразасын кезекке қою. Ережелер осы жерде бір-ақ орында тексеріледі. */
+function cue(key, mid, ttl) {
+  if (S.settings.voice === 'off') return false;
+  if (Run.cued[key]) return false;                     // бір қадамда екі рет айтылмайды
+  if (Run.cueN >= CUE_MAX) return false;               // тым жиі болмасын
+  if (mid && Run.cueMid >= CUE_MID_MAX) return false;
+  Run.cued[key] = 1; Run.cueN++; if (mid) Run.cueMid++;
+  VoiceQ.push(CUE_TXT[key] || '', key, ttl);
+  return true;
+}
 /* =========================================================================
    1) ДЕНЕ ЖАТТЫҒУЛАРЫ — қалыптар (poses) мен нұсқаулықтар
    Қалып = адам фигурасының буындары: hd бас, nk мойын, hp жамбас,
@@ -1897,7 +2088,7 @@ const BODY = [
         hR: [88, 24] })]
   },
   {
-    id: 'birddog', name: 'Қарама-қарсы қол-аяқ созу', say: 'Қарама қарсы қол аяқ созу',
+    id: 'birddog', name: 'Қарама-қарсы қол-аяқ созу', say: 'Құс ит',
     type: 'reps', base: 8, group: 'арқа',
     tip: 'Төрттағандап тұр: алақан иықтың, тізе жамбастың астында. Бір қолды алға, қарама-қарсы аяқты артқа соз. 2 секунд ұстап, ауыстыр.',
     err: 'Қате: бел майысып, жамбас бір жағына бұрылып кетеді. Арқада стакан тұрғандай тегіс ұста.',
@@ -1926,7 +2117,7 @@ const BODY = [
       P(WALL, { hd: [68, 30], nk: [68, 44], hp: [68, 60], kL: [48, 68], kR: [50, 70] })]
   },
   {
-    id: 'dips', name: 'Кері тіреу', say: 'Кері тіреу',
+    id: 'dips', name: 'Кері тіреу', say: 'Орындықтан итерілу',
     type: 'reps', base: 8, group: 'кеуде-қол',
     tip: 'Қолды артқа тіреп отыр, саусақ денеге қарасын. Шынтақты артқа бүгіп, жамбасты еденге жақындат. Иықты құлаққа көтерме.',
     err: 'Қате: шынтақ жанға жайылып, жамбас қолдан тым алыс кетеді — иыққа артық күш түседі.',
@@ -1974,7 +2165,7 @@ const BODY = [
     bad: [QUAD, P(QUAD, { hd: [26, 42] })]
   },
   {
-    id: 'highknees', name: 'Орнында тізе көтеру', say: 'Орнында тізе көтеру',
+    id: 'highknees', name: 'Орнында тізе көтеру', say: 'Тізе көтеру',
     type: 'time', base: 20, group: 'бүкіл дене',
     tip: 'Орнында жүгіргендей, тізені жамбас деңгейіне дейін көтер. Аяқтың ұшына жеңіл түс, дене тік. Қарқынды, бірақ бақылаумен жаса.',
     err: 'Қате: денені артқа шалқайтып, тізені жартылай ғана көтеру.',
@@ -2102,7 +2293,7 @@ const FACE = [
       hands: [] }
   },
   {
-    id: 'brow', name: 'Қас арасын жазу', reps: '10 рет × 2 сет',
+    id: 'brow', name: 'Қас арасын жазу', say: 'Қас көтеру', reps: '10 рет × 2 сет',
     steps: ['Екі сұқ саусақты қастың үстіне қой.',
       'Қабақты түюге тырыс, саусақпен қарсылық көрсет.',
       '5 секунд ұстап, маңдайды толық босаңсыт.'],
@@ -2120,7 +2311,7 @@ const FACE = [
       hands: [[[46, 112], [46, 108]], [[74, 112], [74, 108]]] }
   },
   {
-    id: 'relax', name: 'Бетті босаңсыту', reps: '1 мин · тыныс алу',
+    id: 'relax', name: 'Бетті босаңсыту', say: 'Бетті босату', reps: '1 мин · тыныс алу',
     steps: ['Көзді жұмып, иықты түсір.',
       'Мұрынмен 4 санағанша дем ал, 6 санағанша ауызбен шығар.',
       'Тіс пен қасты толық босаңсыт — бет «ауыр» болып сезілсін.'],
@@ -2128,7 +2319,7 @@ const FACE = [
     anim: { mouth: [[9, 4], [11, 6]], eye: [5.5, 0.6], brow: [0, 1], hands: [] }
   },
   {
-    id: 'chew', name: 'Шайнау бұлшықетін босату', reps: '10 рет × 2 сет',
+    id: 'chew', name: 'Шайнау бұлшықетін босату', say: 'Шайнау жаттығуы', reps: '10 рет × 2 сет',
     steps: ['Саусақты жақтың бұрышына — құлақтың алдына қой.',
       'Тісті жеңіл қысып, бұлшықеттің қатқанын сез, содан соң толық босат.',
       'Жақ босаған күйде дөңгелете 10 рет уқала.'],
@@ -2155,7 +2346,7 @@ const FACE = [
       hands: [[[22, 56], [18, 52]], [[98, 56], [102, 52]]] }
   },
   {
-    id: 'tongue', name: 'Тіл тірегі', reps: '10 рет × 3 сет',
+    id: 'tongue', name: 'Тіл тірегі', say: 'Тіл жаттығуы', reps: '10 рет × 3 сет',
     steps: ['Тілдің ұшын алдыңғы тістің артындағы таңдайға мықтап тіре.',
       'Басты сәл шалқайтып, иек астының тартылғанын сез.',
       '5 секунд ұстап, баяу босаңсы.'],
@@ -2938,7 +3129,11 @@ const PHRASES = [
 
 const Run = {
   steps: [], i: 0, left: 0, total: 0, paused: false, timer: null,
-  program: 'body', day: 1, repeat: false, plan: null, startedAt: 0, wake: null
+  program: 'body', day: 1, repeat: false, plan: null, startedAt: 0, wake: null,
+  /* дауыстық сүйемелдеу күйі */
+  elapsed: 0,          // ағымдағы қадамда өткен секунд
+  cued: {}, cueN: 0, cueMid: 0,   // осы қадамда айтылған фразалар мен олардың саны
+  pre: false, cd: null            // басталар алдындағы кері санақ
 };
 
 /* Күнді бастау: жоспардан қадамдар тізбегін құру */
@@ -2965,8 +3160,38 @@ function openRunner() {
   $('#ov-run').classList.add('show');
   $('#r-arc').setAttribute('stroke-dasharray', RING_C);
   Sound.ready();
+  VoiceRec.load();            // жазылған дауысты алдын ала жүктеп қоямыз
   keepAwake(true);
+  Run.pre = true;             // кері санақ бітпейінше жаттығу аты айтылмайды
   loadStep();
+  startCountdown();
+}
+/* Бағдарлама басталар алдындағы 3 секундтық кері санақ.
+   «Дайынсың ба?» → үш, екі, бір → «Бастадық!» → таймер жүреді. */
+function startCountdown() {
+  if (Run.program === 'face') VoiceQ.push(CUE_TXT['fc-wash'], 'fc-wash', 9000);
+  VoiceQ.push(CUE_TXT['cmd-ready'], 'cmd-ready', 9000, () => {
+    let n = CFG.SPEAK_FROM;
+    const step = () => {
+      if (!$('#ov-run').classList.contains('show')) return;
+      $('#r-sec').textContent = n;
+      $('#r-unit').textContent = 'СЕК';
+      Voice.count(n);
+      Sound.beep(CFG.BEEP_HZ, CFG.BEEP_MS);
+      if (--n > 0) return;
+      clearInterval(Run.cd); Run.cd = null;
+      setTimeout(beginWork, 1000);
+    };
+    step();
+    Run.cd = setInterval(step, 1000);
+  });
+}
+function beginWork() {
+  if (!$('#ov-run').classList.contains('show') || !Run.pre) return;
+  Run.pre = false;
+  VoiceQ.push(CUE_TXT['cmd-start'], 'cmd-start', 4000);
+  announce(curStep(), curStep().kind === 'rest');
+  paintTimer();
   Run.timer = setInterval(tick, 1000);
 }
 /* Экранның сөнбеуін сұрау (қолдаса) */
@@ -2995,7 +3220,8 @@ function loadStep() {
   $('#r-title').textContent = Run.day + '-КҮН · ' + workIndex() + '/' + workTotal() + ' жаттығу';
   $('#r-phase').textContent = rest ? 'Демалыс' : 'Жұмыс';
   if (rest) loadRest(st); else loadWork(st);
-  announce(st, rest);
+  Run.elapsed = 0; Run.cued = {}; Run.cueN = 0; Run.cueMid = 0;   // фраза есебі жаңарады
+  if (!Run.pre) announce(st, rest);
   paintTimer();
 }
 function loadWork(st) {
@@ -3052,21 +3278,82 @@ function stepInstr(it) {
 }
 /* Дауыстық сүйемелдеу */
 function announce(st, rest) {
-  Voice.stop();
-  if (rest) { Voice.say('Демал'); return; }
+  VoiceQ.hold = false;
+  if (rest) {
+    /* Демалыс: «Демал» → «Келесі жаттығу» → келесінің аты */
+    cue('cmd-rest', false, 4000);
+    const nx = Run.plan.items[st.next];
+    if (nx) {
+      cue('cmd-next', false, 5000);
+      VoiceQ.push(exSay(nx.ex), SAY_KEY[nx.ex.id] || '', 6000);
+    }
+    return;
+  }
   const it = st.it;
-  Voice.say(it.ex.say ? it.ex.say : it.ex.name);
+  VoiceQ.push(exSay(it.ex), SAY_KEY[it.ex.id] || '', 5000);
+  if (st.n === workTotal()) cue('cmd-almost', false, 6000);      // күннің соңғы жаттығуы
+  if (Run.program !== 'face') return;
+  if (st.n === 1) cue('fc-mirror', false, 7000);                 // бірінші жаттығу
+  cue('fc-hold', false, 8000);                                   // ұстау кезеңі басталды
+  if (it.set > 1) cue('fc-repeat', false, 8000);                 // сет аралығы
+  if (FC_EFFORT[it.ex.id]) cue('fc-gentle', false, 8000);        // күш салу қажет
 }
+function exSay(ex) { return ex.say ? ex.say : ex.name; }
 /* Секунд сайынғы соғыс — тек уақытпен өлшенетін қадамдарда */
 function tick() {
-  if (Run.paused || !Run.total) return;
+  if (Run.paused) return;
+  const st = curStep();
+  if (!st) return;
+  Run.elapsed++;
+  if (!Run.total) return cueWork(st);       // қайталаумен өлшенетін қадам — таймер жоқ
   Run.left--;
+  /* Сан санау басталар алдында команда фразалары кідіреді */
+  VoiceQ.hold = (Run.left <= CFG.SPEAK_FROM);
+  if (st.kind === 'rest') cueRest(); else cueWork(st);
   if (Run.left <= CFG.SPEAK_FROM && Run.left > 0) {
     Voice.count(Run.left);
     Sound.beep(CFG.BEEP_HZ, CFG.BEEP_MS);
   }
   if (Run.left <= 0) return nextStep();
   paintTimer();
+}
+/* Демалыс кезіндегі фраза: аяқталуына ~3 сек қалғанда «Дайындал» */
+function cueRest() {
+  if (Run.left === CFG.SPEAK_FROM + 1) cue('cmd-prepare', false, 1500);
+}
+/* Жаттығу кезіндегі фразалар.
+   «Орта» фразалары бір қадамда екеуден аспайды, сондықтан бір-бірін баспас үшін
+   бөлініп берілген:
+     · 1-аптада «қалыпты ұста» мен «баяу жаса» кезектесіп келеді (тақ/жұп жаттығу);
+     · статикалық жаттығуда ортаны «тыныс ал» алады, «жартысы өтті» айтылмайды. */
+function cueWork(st) {
+  const it = st.it, tot = Run.total;
+  const wk1 = (Run.day <= PRG.WEEK);          // алғашқы 7 күн
+  const stat = !!STATIC_EX[it.ex.id];         // тақтай, бүйір тақтайы, қабырғаға отыру
+  const odd = (st.n % 2 === 1);
+  if (Run.elapsed === 5 && wk1 && odd) cue('cmd-form', true);
+
+  /* Ортасы мен соңын анықтау. Уақытпен өлшенетін жаттығуда — нақты,
+     қайталаумен өлшенетінде — орташа темп бойынша БОЛЖАМ:
+     ұзақтығы ≈ қайталау саны × темп, ортасы 50%-да, соңы 85%-да.
+     Пайдаланушы жылдам/баяу жасаса, сәт бірер секундқа жылжуы мүмкін. */
+  let atHalf, atLast;
+  if (tot) {
+    if (tot < 12) return;
+    atHalf = (Run.left === Math.floor(tot / 2));
+    atLast = (Run.left === 5);                               // соңғы 5 секунд
+  } else {
+    const est = (it.reps || 0) * (it.ex.tempo || PRG.SEC_PER_REP);
+    if (est < 12) return;                                    // тым қысқа — үнсіз қалдырамыз
+    atHalf = (Run.elapsed === Math.round(est * 0.5));
+    atLast = (Run.elapsed === Math.round(est * 0.85));        // соңғы 15%
+  }
+  if (atHalf) {
+    if (wk1 && !odd) cue('cmd-slow', true);
+    if (!stat) cue('cmd-half', true);
+  }
+  if (tot && stat && Run.left === Math.floor(tot * 0.35)) cue('cmd-breathe', true);
+  if (atLast) cue('cmd-last', false, 2000);
 }
 function paintTimer() {
   const st = curStep();
@@ -3080,6 +3367,13 @@ function paintTimer() {
 function nextStep() {
   Sound.beep(CFG.BEEP_HI, 220);
   buzz(CFG.VIB_OK);
+  const st = curStep();
+  VoiceQ.hold = false;
+  if (st && st.kind === 'work') {
+    /* Бет жаттығуында ұстау аяқталды, сосын — «Жарайсың» */
+    if (Run.program === 'face') VoiceQ.push(CUE_TXT['fc-release'], 'fc-release', 2000);
+    VoiceQ.push(CUE_TXT['cmd-good'], 'cmd-good', 2500);
+  }
   Run.i++;
   if (Run.i >= Run.steps.length) return finishRun();
   loadStep();
@@ -3087,6 +3381,7 @@ function nextStep() {
 function prevStep() {
   if (Run.i <= 0) return;
   buzz();
+  Voice.stop();                    // артқа қайтқанда сөйлеп тұрғанын үземіз
   Run.i--;
   loadStep();
 }
@@ -3095,19 +3390,24 @@ function togglePause() {
   Run.paused = !Run.paused;
   $('#r-pause').innerHTML = Run.paused
     ? ico('play', 'i-solid') + 'Жалғастыру' : ico('pause') + 'Пауза';
-  if (Run.paused) Voice.stop();
+  Voice.stop();
+  Voice.say(CUE_TXT[Run.paused ? 'cmd-pause' : 'cmd-resume'],
+    Run.paused ? 'cmd-pause' : 'cmd-resume');
   pause3D(Run.paused);
   buzz();
 }
 function stopRun(ask) {
   if (ask && !confirm('Прогресс сақталмайды. Шығасың ба?')) return;
   clearInterval(Run.timer); Run.timer = null;
+  clearInterval(Run.cd); Run.cd = null; Run.pre = false;
   Voice.stop(); keepAwake(false); unmount3D();
   $('#ov-run').classList.remove('show');
 }
 /* ---------- Күннің аяқталуы ---------- */
 function finishRun() {
   clearInterval(Run.timer); Run.timer = null;
+  clearInterval(Run.cd); Run.cd = null; Run.pre = false;
+  VoiceQ.hold = false;
   keepAwake(false); unmount3D();
   const min = Math.max(1, Math.round((Date.now() - Run.startedAt) / 60000));
   const kcal = Math.round(min * PRG.KCAL[Run.program]);
@@ -3124,10 +3424,15 @@ function showDone(min, kcal, streak) {
     Run.plan.exCount + ' жаттығу';
   $('#d-ring').innerHTML = miniRing(p.completed.length, PRG.DAYS);
   $('#d-days').textContent = p.completed.length + ' / ' + PRG.DAYS;
-  $('#d-phrase').textContent = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+  const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+  $('#d-phrase').textContent = phrase;
   $('#d-cycle').style.display = isProgramDone(Run.program) ? 'flex' : 'none';
   buzz(CFG.VIB_OK);
-  Voice.say('Жарайсың! ' + Run.day + '-күн аяқталды.');
+  const week = (Run.day % PRG.WEEK === 0 && !Run.repeat);
+  Voice.say('Жарайсың! ' + Run.day + '-күн аяқталды.',
+    week ? 'cmd-week-done' : 'cmd-day-done');
+  /* Мотивация фразасы — жазылған 8-еуінің кездейсоқ біреуі */
+  VoiceQ.push(phrase, 'mot-' + (1 + Math.floor(Math.random() * 8)), 12000);
 }
 function doneTitle() {
   if (isProgramDone(Run.program)) return 'АЯҚТАДЫҢ!';
@@ -3264,8 +3569,10 @@ function dismissAlarm() {
    12) БАПТАУЛАР, ЭКСПОРТ / ИМПОРТ, ЕСКЕ САЛУ
    ========================================================================= */
 function renderSettings() {
-  ['sound', 'vibro', 'voice', 'notif', 'photo', 'd3'].forEach((k) =>
+  ['sound', 'vibro', 'notif', 'photo', 'd3'].forEach((k) =>
     $('#st-' + k).classList.toggle('on', !!S.settings[k]));
+  markChips('#st-voice', S.settings.voice);
+  $('#st-voice-sub').textContent = VOICE_SUB[S.settings.voice] || '';
   $('#st-rtime').value = S.settings.rtime;
   $('#st-notif-sub').textContent = S.settings.notif
     ? 'Қосулы — күн сайын ' + S.settings.rtime : 'Өшірулі';
@@ -3280,6 +3587,24 @@ function renderSettings() {
     '<div class="task"><div class="tick ic">' + ico('gauge') +
     '</div><div style="flex:1"><div class="t-name">Деңгей</div>' +
     '<div class="t-sub">' + (p.level || 'көрсетілмеген') + '</div></div></div>';
+}
+/* Дауыс режимін ауыстыру — таңдағанда бірден үлгі фразаны ойнатамыз */
+function setVoiceMode(mode) {
+  if (VOICE_MODES.indexOf(mode) < 0) return;
+  Voice.stop();
+  S.settings.voice = mode;
+  saveState(); renderSettings(); buzz();
+  if (mode === 'off') return;
+  Sound.ready();                       // iOS: осы басуды пайдаланып контекстті ашамыз
+  if (mode === 'tts') return Voice.say('Дайынсың ба?');
+  VoiceRec.load();
+  setTimeout(() => {
+    if (S.settings.voice !== 'rec') return;
+    if (VoiceRec.state === 'fail') {
+      toast('voice.mp3 табылмады — жүйе дауысы қолданылады.');
+      Voice.tts('Дайынсың ба?');
+    } else { Voice.say('Дайынсың ба?', 'cmd-ready'); }
+  }, 400);
 }
 function toggleSetting(key) {
   S.settings[key] = !S.settings[key];
@@ -4174,8 +4499,10 @@ function bindChips(sel, apply) {
   }));
 }
 function bindSettings() {
-  ['sound', 'vibro', 'voice', 'notif', 'photo', 'd3'].forEach((k) =>
+  ['sound', 'vibro', 'notif', 'photo', 'd3'].forEach((k) =>
     $('#st-' + k).addEventListener('click', () => toggleSetting(k)));
+  $$('#st-voice .chip-b').forEach((b) =>
+    b.addEventListener('click', () => setVoiceMode(b.dataset.v)));
   $('#st-rtime').addEventListener('change', (e) => {
     S.settings.rtime = e.target.value || '08:00'; saveState(); renderSettings();
   });

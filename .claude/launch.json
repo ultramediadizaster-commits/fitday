@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "fitday",
-      "runtimeExecutable": "python",
+      "runtimeExecutable": "py",
       "runtimeArgs": ["-m", "http.server", "8123"],
       "port": 8123
     }

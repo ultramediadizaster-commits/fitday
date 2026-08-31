@@ -1,5 +1,5 @@
 /* FitDay service worker — офлайн жұмыс үшін кэш */
-const CACHE = 'fitday-v6';   // 3D көрінісі қосылды — ескі кэш ауыстырылады
+const CACHE = 'fitday-v8';   // дауыстық сүйемелдеу оқиғаларға жалғанды
 
 /* Қосымшаның қаңқасы (app shell) */
 const ASSETS = [
@@ -12,7 +12,9 @@ const ASSETS = [
   './icon-maskable.png',
   './js/three.min.js',
   './js/GLTFLoader.js',
-  './models/athlete.glb'
+  './models/athlete.glb',
+  './audio/voice.mp3',
+  './audio/sprite.json'
 ];
 
 /* Орнату: барлық файлды кэшке саламыз (біреуі жоқ болса да құламайды) */

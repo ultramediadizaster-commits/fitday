@@ -1,1 +1,5 @@
 3d-source/
+# Шикі жазбалар мен кесілген бөліктер — тек жергілікті, репоға керегі жоқ.
+# Спрайтты қайта жинау үшін tools/cut_audio.py + tools/build_sprite.py қолдан.
+audio/raw/
+audio/parts/
