@@ -535,6 +535,15 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.6)}
 .chip-b:active{transform:scale(0.97)}
 .chip-b.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 
+/* Дауыс диагностикасы — телефонда не болып жатқанын көру үшін */
+.diag{margin-top:11px;padding:10px 12px;border-radius:var(--r-sm);
+  background:var(--bg);border:1px solid var(--border);color:var(--muted);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.diag b{color:var(--text);font-weight:600}
+.diag .bad{color:var(--danger)}
+.diag .good{color:var(--accent)}
+
 /* Түсіру түймелері */
 .shot-row{display:flex;gap:8px;margin-bottom:var(--gap)}
 .shot-b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -892,11 +901,17 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.6)}
         <div class="row" style="display:block">
           <div class="t-txt" style="margin-bottom:11px"><div class="t-name">Дауыс</div>
             <span class="t-sub" id="st-voice-sub">Санау мен жаттығу атауы</span></div>
-          <div class="chips" id="st-voice" style="margin-bottom:0">
+          <div class="chips" id="st-voice" style="margin-bottom:11px">
             <button class="chip-b" data-v="rec">Жазылған</button>
             <button class="chip-b" data-v="tts">Жүйе</button>
             <button class="chip-b" data-v="off">Өшірулі</button>
           </div>
+          <button class="btn sm" id="st-voice-test">
+            <svg class="i" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/>
+              <path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            Дауысты тексеру
+          </button>
+          <pre class="diag" id="st-voice-diag">—</pre>
         </div>
         <div class="row">
           <div class="t-txt"><div class="t-name">3D анимация</div>
@@ -1387,8 +1402,12 @@ const Sound = {
   ctx: null,
   alarmTimer: null,
   warned: false,
+  unlocked: false,
 
-  /* Аудио контексті тек пайдаланушы әрекетінен кейін ашылады */
+  /* Аудио контексті тек пайдаланушы әрекетінен кейін ашылады.
+     resume() — әрқашан синхронды шақырылады: егер оны await-тан кейін
+     шақырсақ, мобиль браузер басу оқиғасымен байланысын жоғалтады да
+     рұқсат бермейді. */
   ready() {
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -1400,6 +1419,23 @@ const Sound = {
       if (!this.warned) { toast('Браузер дыбысты қолдамайды — вибрация қосылады.'); this.warned = true; }
       return false;
     }
+  },
+
+  /* iOS/Android «unlock»: пайдаланушы басуының СИНХРОНДЫ бөлігінде
+     0 ұзақтықтағы бос буферді бір рет ойнатпайынша контекст ашылмайды.
+     Тек resume() жеткіліксіз — iOS Safari оны елемейді. */
+  unlock() {
+    if (!this.ready()) return false;
+    if (this.unlocked) return true;
+    try {
+      const b = this.ctx.createBuffer(1, 1, 22050);
+      const s = this.ctx.createBufferSource();
+      s.buffer = b;
+      s.connect(this.ctx.destination);
+      s.start(0);
+      this.unlocked = true;
+    } catch (e) { /* қолдамаса — ready() күйінде қаламыз */ }
+    return true;
   },
 
   /* Бір қысқа сигнал */
@@ -1701,37 +1737,87 @@ const AlarmVoice = {
    AudioBufferSourceNode.start(0, offset, duration) арқылы ойналады.
    Жүктелмесе (желі жоқ / файл жоқ) — SpeechSynthesis-ке қайтамыз.
    ========================================================================= */
+/* fetch желі деңгейінде құласа TypeError береді — себебін түсінікті етеміз */
+function wrapNet(e, file) {
+  if (e instanceof TypeError) {
+    return new Error(file + ': желіге шыға алмады (офлайн, CORS немесе файл жоқ) — ' + e.message);
+  }
+  return e;
+}
 const VoiceRec = {
   buf: null,          // декодталған дыбыс
   map: null,          // { "count-1": [offset, duration], ... }
   state: 'idle',      // idle | loading | ready | fail
   node: null,         // қазір ойнап тұрған дереккөз
   gain: null,
+  err: '',            // сәтсіз болса — нақты себебі
+  mime: '', bytes: 0, // сервер қандай Content-Type бергені мен файл көлемі
 
-  /* Бір рет жүктеу. Аудио контексті Sound.ready() ашқаннан кейін ғана. */
+  /* Бір рет жүктеу. Аудио контексті Sound.ready() ашқаннан кейін ғана.
+     Қате болса — себебі НАҚТЫ жазылады (HTTP коды, желі, decode қатесі),
+     себебі телефонда мұны басқаша көру мүмкін емес. */
   load() {
     if (this.state === 'loading' || this.state === 'ready') return;
     if (!Sound.ready()) return;
-    this.state = 'loading';
+    this.state = 'loading'; this.err = '';
     const ctx = Sound.ctx;
-    Promise.all([
-      fetch('./audio/sprite.json').then((r) => { if (!r.ok) throw 0; return r.json(); }),
-      fetch('./audio/voice.mp3').then((r) => { if (!r.ok) throw 0; return r.arrayBuffer(); })
-        .then((ab) => new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)))
-    ]).then((out) => {
+
+    const sprite = fetch('./audio/sprite.json')
+      .then((r) => {
+        if (!r.ok) throw new Error('sprite.json: HTTP ' + r.status + ' ' + r.statusText);
+        return r.json();
+      })
+      .catch((e) => { throw wrapNet(e, 'sprite.json'); });
+
+    const voice = fetch('./audio/voice.mp3')
+      .then((r) => {
+        if (!r.ok) throw new Error('voice.mp3: HTTP ' + r.status + ' ' + r.statusText);
+        this.mime = r.headers.get('content-type') || '(Content-Type жоқ)';
+        return r.arrayBuffer();
+      })
+      .catch((e) => { throw wrapNet(e, 'voice.mp3'); })
+      .then((ab) => {
+        this.bytes = ab.byteLength;
+        if (!this.bytes) throw new Error('voice.mp3 бос келді (0 байт)');
+        return new Promise((res, rej) => {
+          /* Ескі iOS-та decodeAudioData промис қайтармайды — callback нұсқасы.
+             Жаңа браузерде промис ТЕ қайтады: оны да ұстамасақ,
+             «Uncaught (in promise)» болып шығады. */
+          const p = ctx.decodeAudioData(ab, res, (e) => rej(new Error(
+            'decodeAudioData сәтсіз: ' + ((e && e.message) || 'формат оқылмады') +
+            ' [Content-Type: ' + this.mime + ', ' + this.bytes + ' байт]')));
+          if (p && p.catch) p.catch(() => {});
+        });
+      });
+
+    Promise.all([sprite, voice]).then((out) => {
       this.map = out[0]; this.buf = out[1]; this.state = 'ready';
-    }).catch(() => { this.state = 'fail'; this.map = null; this.buf = null; });
+      console.info('[FitDay] жазылған дауыс дайын:', Object.keys(this.map).length,
+        'фраза,', this.bytes, 'байт,', this.mime);
+      if ($('#st-voice-diag')) renderVoiceDiag();
+    }).catch((e) => {
+      this.state = 'fail'; this.map = null; this.buf = null;
+      this.err = (e && e.message) || String(e);
+      console.error('[FitDay] жазылған дауыс жүктелмеді —', this.err);
+      if ($('#st-voice-diag')) renderVoiceDiag();
+    });
   },
 
   has(key) { return !!(this.state === 'ready' && key && this.map && this.map[key]); },
 
-  /* Спрайттан бір фразаны ойнату. Сәтті болса true, біткенде done() шақырылады. */
+  /* Спрайттан бір фразаны ойнату. Сәтті болса true, біткенде done() шақырылады.
+     Телефонда контекст экран сөнгенде ұйықтап қалады — әр фраза алдында
+     күйін тексеріп, керек болса оятамыз. */
   play(key, done) {
     if (!this.has(key) || !Sound.ready()) return false;
+    const ctx = Sound.ctx;
+    if (ctx.state === 'suspended') {
+      const r = ctx.resume();
+      if (r && r.catch) r.catch(() => {});
+    }
     const seg = this.map[key];
     try {
       this.stop();
-      const ctx = Sound.ctx;
       const src = ctx.createBufferSource();
       const g = ctx.createGain();
       src.buffer = this.buf;
@@ -3023,6 +3109,9 @@ function bindProgram(program, box) {
 }
 /* Күнді бастау ережелері: кезекті аттауға болмайды, күніне бір күн */
 function tryStartDay(program, day, repeat) {
+  /* «БАСТА» басуының синхронды бөлігі — аудионы дәл осы жерде ашамыз */
+  Sound.unlock();
+  VoiceRec.load();
   const st = dayStatus(program, day);
   if (st === 'lock') return toast('Алдымен ' + S[program].currentDay + '-күнді аяқта.');
   if (!repeat && didToday(program)) return toast('Бүгінгі күн жасалды. Ертең қайта кел!');
@@ -3573,6 +3662,7 @@ function renderSettings() {
     $('#st-' + k).classList.toggle('on', !!S.settings[k]));
   markChips('#st-voice', S.settings.voice);
   $('#st-voice-sub').textContent = VOICE_SUB[S.settings.voice] || '';
+  renderVoiceDiag();
   $('#st-rtime').value = S.settings.rtime;
   $('#st-notif-sub').textContent = S.settings.notif
     ? 'Қосулы — күн сайын ' + S.settings.rtime : 'Өшірулі';
@@ -3588,22 +3678,78 @@ function renderSettings() {
     '</div><div style="flex:1"><div class="t-name">Деңгей</div>' +
     '<div class="t-sub">' + (p.level || 'көрсетілмеген') + '</div></div></div>';
 }
+/* Дауыс диагностикасы — телефонда себебін көру үшін.
+   Мұнда браузердің дәл сол сәттегі күйі көрсетіледі, болжам жоқ. */
+const VR_STATE = { idle: 'басталмаған', loading: 'жүктелуде…', ready: 'дайын', fail: 'СӘТСІЗ' };
+function renderVoiceDiag() {
+  const el = $('#st-voice-diag');
+  if (!el) return;
+  const ctx = Sound.ctx;
+  const keys = VoiceRec.map ? Object.keys(VoiceRec.map).length : 0;
+  const ok = (v, good) => '<span class="' + (good ? 'good' : 'bad') + '">' + esc(v) + '</span>';
+  const rows = [];
+  rows.push('<b>AudioContext:</b> ' + (ctx
+    ? ok(ctx.state, ctx.state === 'running') + ' · ' + Math.round(ctx.sampleRate) + ' Гц'
+    : ok('ашылмаған', false)));
+  rows.push('<b>Unlock (iOS):</b> ' + ok(Sound.unlocked ? 'иә' : 'жоқ', Sound.unlocked));
+  rows.push('<b>voice.mp3:</b> ' + ok(VR_STATE[VoiceRec.state] || VoiceRec.state,
+    VoiceRec.state === 'ready'));
+  if (VoiceRec.bytes) {
+    rows.push('<b>көлемі:</b> ' + Math.round(VoiceRec.bytes / 1024) + ' КБ · ' +
+      esc(VoiceRec.mime));
+  }
+  rows.push('<b>спрайт кілттері:</b> ' + ok(keys, keys > 0));
+  if (VoiceRec.buf) rows.push('<b>ұзақтығы:</b> ' + VoiceRec.buf.duration.toFixed(2) + ' с');
+  if (VoiceRec.err) rows.push('<b>қате:</b> ' + ok(VoiceRec.err, false));
+  rows.push('<b>жүйе дауысы:</b> ' + (Voice.ok
+    ? (Voice.pick ? esc(Voice.pick.name + ' (' + Voice.pick.lang + ')') : 'әдепкі')
+    : 'қолдамайды'));
+  el.innerHTML = rows.join('\n');
+}
+function esc(s) {
+  return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+/* «Дауысты тексеру» — басу оқиғасының синхронды бөлігінде ашып, сосын ойнатамыз */
+function testVoice() {
+  Sound.unlock();                        // ЕҢ АЛДЫМЕН, await-сыз
+  buzz();
+  VoiceRec.load();
+  renderVoiceDiag();
+  const mode = S.settings.voice;
+  if (mode === 'off') return toast('Дауыс өшірулі — алдымен «Жазылған» не «Жүйе» таңда.');
+  if (mode === 'tts') { Voice.stop(); Voice.say(CUE_TXT['cmd-ready']); return; }
+  /* Жазылған нұсқа: жүктелуін күтіп, сосын ойнатамыз */
+  const at = Date.now();
+  const wait = setInterval(() => {
+    renderVoiceDiag();
+    if (VoiceRec.state === 'loading' && Date.now() - at < 15000) return;
+    clearInterval(wait);
+    if (VoiceRec.state === 'ready') {
+      Voice.stop(); Voice.say(CUE_TXT['cmd-ready'], 'cmd-ready');
+      toast('Жазылған дауыс ойнады.');
+    } else {
+      toast('voice.mp3 жүктелмеді — жүйе дауысы қолданылады.');
+      Voice.stop(); Voice.tts(CUE_TXT['cmd-ready']);
+    }
+  }, 200);
+}
 /* Дауыс режимін ауыстыру — таңдағанда бірден үлгі фразаны ойнатамыз */
 function setVoiceMode(mode) {
   if (VOICE_MODES.indexOf(mode) < 0) return;
+  Sound.unlock();                      // iOS: осы басудың синхронды бөлігінде ашамыз
   Voice.stop();
   S.settings.voice = mode;
   saveState(); renderSettings(); buzz();
   if (mode === 'off') return;
-  Sound.ready();                       // iOS: осы басуды пайдаланып контекстті ашамыз
-  if (mode === 'tts') return Voice.say('Дайынсың ба?');
+  if (mode === 'tts') return Voice.say(CUE_TXT['cmd-ready']);
   VoiceRec.load();
   setTimeout(() => {
     if (S.settings.voice !== 'rec') return;
+    renderVoiceDiag();
     if (VoiceRec.state === 'fail') {
-      toast('voice.mp3 табылмады — жүйе дауысы қолданылады.');
-      Voice.tts('Дайынсың ба?');
-    } else { Voice.say('Дайынсың ба?', 'cmd-ready'); }
+      toast('voice.mp3 жүктелмеді — жүйе дауысы қолданылады.');
+      Voice.tts(CUE_TXT['cmd-ready']);
+    } else { Voice.say(CUE_TXT['cmd-ready'], 'cmd-ready'); }
   }, 400);
 }
 function toggleSetting(key) {
@@ -4503,6 +4649,7 @@ function bindSettings() {
     $('#st-' + k).addEventListener('click', () => toggleSetting(k)));
   $$('#st-voice .chip-b').forEach((b) =>
     b.addEventListener('click', () => setVoiceMode(b.dataset.v)));
+  $('#st-voice-test').addEventListener('click', testVoice);
   $('#st-rtime').addEventListener('change', (e) => {
     S.settings.rtime = e.target.value || '08:00'; saveState(); renderSettings();
   });
@@ -4623,6 +4770,28 @@ function initVoices() {
     window.speechSynthesis.onvoiceschanged = () => Voice.choose();
   }
 }
+/* Мобиль браузердің autoplay саясаты: аудио контексті пайдаланушының
+   ЕҢ АЛҒАШҚЫ басуында ашылуы керек. Сол басудың синхронды бөлігінде
+   resume() + бос буфер ойнатамыз (iOS үшін міндетті). */
+function initAudioUnlock() {
+  const types = ['pointerdown', 'touchend', 'mousedown', 'keydown'];
+  const once = () => {
+    Sound.unlock();
+    if (!Sound.unlocked) return;                 // ашылмады — келесі басуда тағы көреміз
+    types.forEach((t) => document.removeEventListener(t, once, true));
+  };
+  types.forEach((t) => document.addEventListener(t, once, true));
+
+  /* Экран сөніп қайта қосылғанда контекст ұйықтап қалады — оятамыз */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !Sound.ctx) return;
+    if (Sound.ctx.state === 'suspended') {
+      const r = Sound.ctx.resume();
+      if (r && r.catch) r.catch(() => {});
+    }
+    if ($('#st-voice-diag')) renderVoiceDiag();
+  });
+}
 function hideSkeleton() {
   const sk = $('#skeleton');
   if (!sk) return;                 // қайта шақырылса — өшіретін ештеңе жоқ
@@ -4635,7 +4804,7 @@ function init() {
   grantFreeze();
   saveState();
   bindNav(); bindRunner(); bindAlarm(); bindSettings(); bindPhotos(); bind3D();
-  initSwipe(); initVoices(); initInstall(); initSW();
+  initSwipe(); initVoices(); initInstall(); initSW(); initAudioUnlock();
   loadPhotos();                    // еске салу баннері үшін фотоларды оқып қоямыз
   renderAll(); renderFace(); renderAlarm();
   startClock();

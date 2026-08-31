@@ -1,5 +1,5 @@
 /* FitDay service worker — офлайн жұмыс үшін кэш */
-const CACHE = 'fitday-v8';   // дауыстық сүйемелдеу оқиғаларға жалғанды
+const CACHE = 'fitday-v9';   // мобиль autoplay түзетуі + дыбыс диагностикасы
 
 /* Қосымшаның қаңқасы (app shell) */
 const ASSETS = [
@@ -53,7 +53,13 @@ function fetchAndCache(req) {
       caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
       return res;
     })
-    .catch(() => caches.match('./index.html'));
+    .catch(() => {
+      /* Офлайн қалдық. Бет ашылса — қаңқаны береміз, ал сурет/дыбыс сияқты
+         қосалқы файлға index.html беруге БОЛМАЙДЫ: voice.mp3 орнына HTML
+         келсе, decodeAudioData түсініксіз қатемен құлайды. */
+      if (req.mode === 'navigate') return caches.match('./index.html');
+      return Response.error();
+    });
 }
 
 /* Еске салу хабарламасын қосымшадан алып көрсету */
