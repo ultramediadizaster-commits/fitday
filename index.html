@@ -3016,9 +3016,11 @@ function loadRest(st) {
   $('#r-metric').innerHTML = newBadge(nx) + metricText(nx) + ' · КЕЛЕСІ';
   $('#r-visual').innerHTML = stepVisual(nx);
   mount3D(clipFor(nx, true));             // демалыс аралығында — idle
+  /* Бет жаттығуларында tip жоқ — сипаттаманы why-дан аламыз */
+  const sub = nx.ex.tip ? nx.ex.tip.split('.')[0] + '.' : (nx.ex.why || '');
   $('#r-instr').innerHTML = '<div class="nxt"><span class="label">Келесі жаттығу</span>' +
     '<div class="t-name">' + nx.ex.name + '</div>' +
-    '<span class="t-sub">' + nx.ex.tip.split('.')[0] + '.</span></div>';
+    '<span class="t-sub">' + sub + '</span></div>';
   $('#r-next').textContent = 'Терең дем ал, су іш.';
   $('#r-done').innerHTML = 'ӨТКІЗУ' + ico('right', 'i-sm');
   $('#r-pause').disabled = false;
