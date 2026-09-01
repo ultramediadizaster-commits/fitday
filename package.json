@@ -1,0 +1,23 @@
+{
+  "name": "fitday",
+  "version": "4.0.0",
+  "description": "FitDay — оятқыш, дене және бет жаттығулары",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build_www.mjs",
+    "sync": "npm run build && npx cap sync",
+    "android": "npm run sync && npx cap open android"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3"
+  }
+}

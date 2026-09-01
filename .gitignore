@@ -4,3 +4,10 @@
 audio/raw/
 audio/parts/
 audio/raw-*.mp3
+
+# Capacitor / Node
+node_modules/
+# tools/build_www.mjs жасайды (npm run build)
+www/
+# оятқыш дыбыстарының уақытша PCM файлдары
+build/

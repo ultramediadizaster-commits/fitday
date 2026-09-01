@@ -1,0 +1,30 @@
+{
+  "appId": "kz.fitday.app",
+  "appName": "FitDay",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0A0A0B",
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 4000,
+      "launchAutoHide": false,
+      "backgroundColor": "#0A0A0B",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_INSIDE",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0A0A0B",
+      "overlaysWebView": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_fitday",
+      "iconColor": "#D9F24E"
+    }
+  }
+}
