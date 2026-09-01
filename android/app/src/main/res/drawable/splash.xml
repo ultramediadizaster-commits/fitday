@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Splash: қара фон (--bg) + ортасында лайм логотип -->
+<!-- Splash: қара фон (bg) + ортасында лайм логотип -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/fitdayBg" />
     <item

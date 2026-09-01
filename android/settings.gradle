@@ -1,3 +1,11 @@
+// Capacitor 8 плагиндері jvmToolchain(21)-ді қатаң талап етеді (өзгертілмейді).
+// Машинада JDK 21 жоқ болса, Gradle оны өзі тауып жүктей алуы үшін foojay
+// resolver керек — әйтпесе build «Cannot find a Java installation … matching
+// {languageVersion=21}» қатесімен құлайды.
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 include ':app'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
