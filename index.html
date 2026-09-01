@@ -3292,8 +3292,11 @@ function beginWork() {
   paintTimer();
   Run.timer = setInterval(tick, 1000);
 }
-/* Экранның сөнбеуін сұрау (қолдаса) */
+/* Экранның сөнбеуін сұрау (қолдаса).
+   Нативті қосымшада @capacitor-community/keep-awake қолданылады — WebView-дегі
+   navigator.wakeLock Android-та сенімсіз. Браузерде бұрынғы жол қалады. */
 function keepAwake(on) {
+  if (window.Native && Native.active) { Native.keepAwake(on); return; }
   try {
     if (on && navigator.wakeLock) {
       navigator.wakeLock.request('screen').then((w) => { Run.wake = w; }).catch(() => {});
@@ -4755,6 +4758,9 @@ function startClock() {
 /* Service worker тіркеу (file:// режимінде мүмкін емес) */
 function initSW() {
   if (!('serviceWorker' in navigator)) return;
+  /* Нативті қосымшада файлдар APK ішінде — кэштің қажеті жоқ, әрі ол
+     жаңарту кезінде ескі index.html-ді беріп қоюы мүмкін. */
+  if (window.Native && Native.active) return;
   if (location.protocol === 'file:') {
     console.info('FitDay: офлайн кэш үшін файлды сервер арқылы аш (http://).');
     return;
