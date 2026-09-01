@@ -7,10 +7,12 @@
    Bundler жоқ, сондықтан плагиндер npm модулі арқылы емес, нативті көпір
    енгізетін window.Capacitor.Plugins арқылы шақырылады.
 
-   ЕҢ МАҢЫЗДЫСЫ — ОЯТҚЫШ. Қосымша жабық тұрғанда JS жүрмейді, сондықтан
-   index.html ішіндегі setInterval оятқышы жарамайды. Оның орнына алдын ала
-   жоспарланған жүйелік хабарламалар қойылады (setExactAndAllowWhileIdle),
-   дыбысы — res/raw ішіндегі файл, арнасы — USAGE_ALARM.
+   ОЯТҚЫШ ТУРАЛЫ. Бұрын хабарламалар JS-тен жоспарланатын
+   (@capacitor/local-notifications). Ол экран өшкенде істеді, бірақ қосымша
+   соңғы қосымшалар тізімінен алынып тасталса, дабылдар жоғалатын. Сондықтан
+   жоспарлау түгел нативке көшті: AlarmChannel.setAlarm() баптауды
+   SharedPreferences-ке жазады да, AlarmManager.setAlarmClock() қояды. JS
+   мұнда тек баптауды береді және соғу белгісін оқиды.
    ============================================================================= */
 (function () {
   'use strict';
@@ -18,33 +20,13 @@
   var Cap = window.Capacitor;
   var isNative = !!(Cap && typeof Cap.isNativePlatform === 'function' && Cap.isNativePlatform());
 
-  /* ---------- Баптаулар ---------- */
-  var CH_VERSION = 'v1';              // AlarmChannelPlugin.VERSION-мен сәйкес болуы тиіс
-  var CH_PREFIX = 'fitday_alarm_';
-  var SOUND_VOICES = ['classic', 'siren', 'industrial', 'drip', 'dawn'];
-  var RANDOM_POOL = ['classic', 'siren', 'industrial', 'drip'];   // index.html-дегідей
-  var VOICE_NAMES = {
-    classic: 'Классика', siren: 'Сирена', industrial: 'Дабыл',
-    drip: 'Тамшы', dawn: 'Таң'
-  };
-  var VIBRATION = [0, 600, 300, 600, 300, 900];   // арнаның діріл ырғағы
-
-  /* Бір оятқыш = бірнеше хабарлама тізбегі. Бір дыбыс 30 секунд, сондықтан
-     30 секунд сайын жаңасы келеді — үзіліссіз шырылдағандай болады.
-     CHAIN × 30 сек = шырылдау ұзақтығы. */
-  var CHAIN = 6;                      // 3 минут
-  var CHAIN_STEP_MS = 30 * 1000;
-  var OCCURRENCES = 10;               // алдағы неше рет оянуды жоспарлаймыз
-  var ID_BASE = 41000;                // біздің хабарлама id-лерінің диапазоны
-  var ID_MAX = ID_BASE + OCCURRENCES * CHAIN;
-
   var Native = {
     active: isNative,
-    channelsReady: false,
     permission: 'unknown',            // granted | denied | unknown
-    exactAllowed: null,               // true | false | null (белгісіз)
-    lastError: null,
-    scheduled: 0
+    exactAllowed: null,
+    batteryOk: null,
+    nextLabel: '',
+    lastError: null
   };
   window.Native = Native;
 
@@ -57,6 +39,7 @@
   function say(msg) {
     if (typeof toast === 'function') toast(msg); else log(msg);
   }
+  function noop() { /* қатені елемейміз */ }
 
   /* =========================================================================
      1) ЭКРАН: күй жолағы, splash
@@ -76,8 +59,6 @@
 
   /* =========================================================================
      2) АРТҚЫ ТҮЙМЕ
-     Тәртібі: ашық оверлей болса — жабамыз (оятқыш экранынан басқасы);
-     негізгі бетте болмасақ — үй бетіне; үйде екі рет бассаң — шығу.
      ========================================================================= */
   var lastBack = 0;
   function initBackButton() {
@@ -93,8 +74,6 @@
       }
       var open = document.querySelector('.ov.show');
       if (open) {
-        /* Жаттығудан шығу — таймерлерді, дауысты, 3D-ні тоқтатып,
-           әрі растауды сұрап шығу керек (прогресс сақталмайды). */
         if (open.id === 'ov-run' && typeof stopRun === 'function') stopRun(true);
         else open.classList.remove('show');
         return;
@@ -111,7 +90,6 @@
 
   /* =========================================================================
      3) ЭКРАННЫҢ СӨНБЕУІ — жаттығу кезінде
-     index.html-дегі navigator.wakeLock орнына нативті нұсқа.
      ========================================================================= */
   Native.keepAwake = function (on) {
     var ka = plugin('KeepAwake');
@@ -124,143 +102,29 @@
      4) ОЯТҚЫШ
      ========================================================================= */
 
-  /* «random» — күнге байланған таңдау. index.html-дегі resolveVoice-пен бірдей
-     болуы керек, әйтпесе экрандағы дыбыс пен хабарламаның дыбысы үйлеспейді. */
-  function resolveVoiceFor(id, date) {
-    if (id !== 'random') return SOUND_VOICES.indexOf(id) >= 0 ? id : 'classic';
-    var key = dayKeyOf(date);
-    var h = 0;
-    for (var i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 9973;
-    return RANDOM_POOL[h % RANDOM_POOL.length];
-  }
-  function pad(n) { return (n < 10 ? '0' : '') + n; }
-  function dayKeyOf(d) {
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-  }
-  function channelFor(voiceId) { return CH_PREFIX + voiceId + '_' + CH_VERSION; }
-
-  /* Хабарлама рұқсаты + арналар. Бір рет жеткілікті. */
-  Native.prepare = function () {
-    var ln = plugin('LocalNotifications');
-    if (!ln) return Promise.resolve(false);
-
-    return ln.checkPermissions()
+  /* Хабарлама рұқсаты (Android 13+). Онсыз оятқыш беті ашылмайды. */
+  Native.askNotifications = function () {
+    var ac = plugin('AlarmChannel');
+    if (!ac || !ac.checkPermissions) return Promise.resolve(true);
+    return ac.checkPermissions()
       .then(function (r) {
-        if (r && r.display === 'granted') return r;
-        return ln.requestPermissions();
+        if (r && r.notifications === 'granted') return r;
+        return ac.requestPermissions();
       })
       .then(function (r) {
-        Native.permission = (r && r.display) || 'unknown';
+        Native.permission = (r && r.notifications) || 'unknown';
         if (Native.permission !== 'granted') {
-          say('Хабарламаға рұқсат жоқ — оятқыш қосымша жабық тұрғанда соқпайды.');
-          return false;
+          say('Хабарламаға рұқсат жоқ — оятқыш экраны ашылмауы мүмкін.');
         }
-        return createChannels();
-      })
-      .then(function (ok) {
-        if (!ok) return false;
-        Native.channelsReady = true;
-        return checkExact();
+        return Native.permission === 'granted';
       })
       .catch(function (e) {
         Native.lastError = String(e && e.message || e);
-        log('prepare қатесі:', Native.lastError);
         return false;
       });
   };
 
-  function createChannels() {
-    var ac = plugin('AlarmChannel');
-    if (!ac) {
-      /* Өз плагині жоқ — стандартты плагинмен жасаймыз. Дыбыс шығады, бірақ
-         ОЯТҚЫШ ағыны емес, хабарлама ағыны қолданылады (әлсіздеу). */
-      return fallbackChannels();
-    }
-    return ac.create({
-      vibration: VIBRATION,
-      voices: SOUND_VOICES.map(function (id) {
-        return { id: id, name: 'FitDay: ' + (VOICE_NAMES[id] || id), sound: 'alarm_' + id + '.mp3' };
-      })
-    }).then(function (r) {
-      log('арналар жасалды:', r && r.created);
-      return true;
-    }, function (e) {
-      Native.lastError = String(e && e.message || e);
-      log('AlarmChannel сәтсіз, стандарт нұсқаға көшеміз:', Native.lastError);
-      return fallbackChannels();
-    });
-  }
-  function fallbackChannels() {
-    var ln = plugin('LocalNotifications');
-    if (!ln || !ln.createChannel) return Promise.resolve(false);
-    var jobs = SOUND_VOICES.map(function (id) {
-      return ln.createChannel({
-        id: channelFor(id),
-        name: 'FitDay: ' + (VOICE_NAMES[id] || id),
-        description: 'FitDay оятқышы',
-        importance: 5,
-        visibility: 1,
-        sound: 'alarm_' + id + '.mp3',
-        vibration: true,
-        lights: true,
-        lightColor: '#D9F24E'
-      }).catch(noop);
-    });
-    return Promise.all(jobs).then(function () { return true; });
-  }
-
-  function checkExact() {
-    var ac = plugin('AlarmChannel');
-    if (!ac || !ac.canScheduleExact) { Native.exactAllowed = null; return true; }
-    return ac.canScheduleExact().then(function (r) {
-      Native.exactAllowed = !!(r && r.granted);
-      if (!Native.exactAllowed) {
-        say('Дәл уақытта ояту рұқсаты жоқ — баптаудан «Оятқыш пен еске салу» рұқсатын бер.');
-      }
-      return true;
-    }, function () { Native.exactAllowed = null; return true; });
-  }
-
-  /* Жүйелік баптау беттері — қосымшадан ашу үшін */
-  Native.openExactSettings = function () {
-    var ac = plugin('AlarmChannel');
-    if (ac && ac.openExactAlarmSettings) ac.openExactAlarmSettings().catch(noop);
-  };
-  Native.openNotificationSettings = function () {
-    var ac = plugin('AlarmChannel');
-    if (ac && ac.openNotificationSettings) ac.openNotificationSettings().catch(noop);
-  };
-
-  /* Алдағы OCCURRENCES рет ояту сәтін есептеу */
-  function occurrences(alarm, from) {
-    var parts = String(alarm.time || '07:00').split(':');
-    var hh = +parts[0] || 0, mm = +parts[1] || 0;
-    var out = [];
-    var d = new Date(from.getTime());
-    d.setSeconds(0, 0);
-    for (var i = 0; i < 90 && out.length < OCCURRENCES; i++) {
-      var day = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i, hh, mm, 0, 0);
-      if (day.getTime() <= from.getTime()) continue;
-      if (alarm.days.indexOf(day.getDay()) < 0) continue;
-      out.push(day);
-    }
-    return out;
-  }
-
-  /* Барлық жоспарланған FitDay оятқышын өшіру */
-  function cancelAll() {
-    var ln = plugin('LocalNotifications');
-    if (!ln) return Promise.resolve();
-    return ln.getPending().then(function (r) {
-      var ours = ((r && r.notifications) || []).filter(function (n) {
-        return n.id >= ID_BASE && n.id < ID_MAX;
-      }).map(function (n) { return { id: n.id }; });
-      if (!ours.length) return null;
-      return ln.cancel({ notifications: ours });
-    }).catch(noop);
-  }
-
-  /* Негізгі функция: күйге қарап хабарламаларды қайта жоспарлау */
+  /* Баптауды нативке беру. saveState() ішінен шақырылады, сондықтан кідіріс бар. */
   var syncTimer = null;
   Native.syncAlarm = function () {
     if (!isNative) return Promise.resolve(false);
@@ -271,83 +135,50 @@
   };
 
   function doSync() {
-    var ln = plugin('LocalNotifications');
-    if (!ln || typeof S === 'undefined' || !S.alarm) return Promise.resolve(false);
-    var alarm = S.alarm;
+    var ac = plugin('AlarmChannel');
+    if (!ac || typeof S === 'undefined' || !S.alarm) return Promise.resolve(false);
+    var a = S.alarm;
+    var parts = String(a.time || '07:00').split(':');
 
-    return cancelAll().then(function () {
-      if (!alarm.on || !alarm.days || !alarm.days.length) {
-        Native.scheduled = 0;
-        log('оятқыш өшірулі — хабарлама жоспарланбады');
-        return false;
-      }
-      if (!Native.channelsReady) return Native.prepare().then(function (ok) {
-        return ok ? schedule(ln, alarm) : false;
-      });
-      return schedule(ln, alarm);
-    });
-  }
-
-  function schedule(ln, alarm) {
-    var list = occurrences(alarm, new Date());
-    var notifications = [];
-
-    list.forEach(function (when, di) {
-      var voice = resolveVoiceFor(alarm.sound, when);
-      var channelId = channelFor(voice);
-      var stamp = dayKeyOf(when) + ' ' + alarm.time;
-
-      for (var ci = 0; ci < CHAIN; ci++) {
-        var at = new Date(when.getTime() + ci * CHAIN_STEP_MS);
-        notifications.push({
-          id: ID_BASE + di * CHAIN + ci,
-          channelId: channelId,
-          title: ci === 0 ? 'Тұратын уақыт келді!' : 'Оятқыш әлі соғып тұр',
-          body: alarm.time + ' · ' + (alarm.math
-            ? 'Өшіру үшін тапсырманы шеш' : 'Өшіру үшін аш'),
-          smallIcon: 'ic_stat_fitday',
-          iconColor: '#D9F24E',
-          ongoing: false,
-          autoCancel: true,
-          sound: 'alarm_' + voice + '.mp3',
-          extra: { fitday: 'alarm', stamp: stamp, chain: ci },
-          schedule: {
-            at: at,
-            allowWhileIdle: true          // Doze режимінде де оянады
-          }
-        });
-      }
-    });
-
-    if (!notifications.length) { Native.scheduled = 0; return false; }
-    return ln.schedule({ notifications: notifications }).then(function () {
-      Native.scheduled = notifications.length;
-      log('жоспарланды:', notifications.length, 'хабарлама,', list.length, 'ояту');
-      return true;
+    return ac.setAlarm({
+      enabled: !!a.on,
+      hour: +parts[0] || 0,
+      minute: +parts[1] || 0,
+      days: (a.days || []).join(','),      // 0 = жексенбі
+      voice: a.sound || 'classic',
+      math: !!a.math,
+      vibro: !!a.vibro
+    }).then(function (r) {
+      Native.nextLabel = (r && r.nextLabel) || '';
+      log(r && r.scheduled ? 'оятқыш қойылды: ' + Native.nextLabel : 'оятқыш өшірулі');
+      if (r && r.scheduled) Native.reliabilitySetup(false);
+      return !!(r && r.scheduled);
     }, function (e) {
       Native.lastError = String(e && e.message || e);
-      Native.scheduled = 0;
       log('жоспарлау қатесі:', Native.lastError);
-      say('Оятқышты жоспарлау мүмкін болмады: ' + Native.lastError);
+      say('Оятқышты қою мүмкін болмады: ' + Native.lastError);
       return false;
     });
   }
 
-  /* Оятқыш өшірілгенде — сол күнгі қалған тізбекті тоқтату */
+  /* Оятқыш өшірілгенде дыбысты тоқтату */
   Native.stopRinging = function () {
-    if (!isNative) return Promise.resolve();
-    return cancelAll().then(function () { return Native.syncAlarm(); });
+    var ac = plugin('AlarmChannel');
+    if (!ac) return Promise.resolve();
+    return ac.stopRinging().catch(noop);
   };
 
-  /* Хабарламаны басқанда — бірден оятқыш экранын ашу */
-  function initNotificationTap() {
-    var ln = plugin('LocalNotifications');
-    if (!ln) return;
-    ln.addListener('localNotificationActionPerformed', function (ev) {
-      var data = ev && ev.notification && ev.notification.extra;
-      if (!data || data.fitday !== 'alarm') return;
-      openRing(data.stamp);
-    });
+  /* Нативте оятқыш соққан ба? Соқса — бетті ашамыз.
+     Қосымша толық жабық тұрғанда да дабыл жүреді, сондықтан бет ашылғанда
+     «мен соқтым» деген белгіні оқып аламыз. */
+  function checkPendingRing() {
+    var ac = plugin('AlarmChannel');
+    if (!ac || !ac.consumePendingRing) return Promise.resolve(false);
+    return ac.consumePendingRing().then(function (r) {
+      if (!r || !r.pending) return false;
+      openRing(r.stamp);
+      return true;
+    }, noop);
   }
 
   /* Қосымша суық күйден ашылса, DOM әлі дайын болмауы мүмкін — күтеміз */
@@ -360,7 +191,7 @@
         return;
       }
       if (ring.classList.contains('show')) return;      // әлдеқашан ашық
-      if (stamp && S.alarm) { S.alarm.lastFire = stamp; }   // қайта соқпасын
+      if (stamp && S.alarm) S.alarm.lastFire = stamp;   // қайта соқпасын
       if (typeof Sound !== 'undefined' && Sound.ready) Sound.ready();
       fireAlarm();
       log('оятқыш экраны ашылды:', stamp);
@@ -369,7 +200,101 @@
   Native.openRing = openRing;
 
   /* =========================================================================
-     5) ҚОЙМАНЫ ТЕКСЕРУ — localStorage мен IndexedDB WebView-де жұмыс істей ме
+     5) СЕНІМДІЛІК: дәл уақыт, батарея, автозапуск
+     ========================================================================= */
+
+  /* Осы өндірушілерде қосымшаны «Автозапуск» тізіміне қолмен қосу керек,
+     әйтпесе жүйе оны жауып тастайды да, оятқыш соқпайды. */
+  var exactPrompted = false;   // дәл уақыт диалогы бір сеанста бір рет
+  var STRICT = ['xiaomi', 'redmi', 'poco', 'huawei', 'honor', 'oppo', 'realme',
+    'vivo', 'oneplus', 'meizu'];
+
+  Native.checkReliability = function () {
+    var ac = plugin('AlarmChannel');
+    if (!ac || !ac.status) return Promise.resolve(null);
+    return ac.status().then(function (r) {
+      if (!r) return null;
+      Native.exactAllowed = r.exactAllowed;
+      Native.batteryOk = r.batteryUnrestricted;
+      Native.nextLabel = r.nextLabel || '';
+      Native.manufacturer = r.manufacturer || '';
+      return r;
+    }, noop);
+  };
+
+  Native.openExactSettings = function () {
+    var ac = plugin('AlarmChannel');
+    if (ac) ac.openExactAlarmSettings().catch(noop);
+  };
+  Native.askBattery = function () {
+    var ac = plugin('AlarmChannel');
+    if (ac) return ac.requestBatteryUnrestricted().catch(noop);
+    return Promise.resolve();
+  };
+  Native.openAppSettings = function () {
+    var ac = plugin('AlarmChannel');
+    if (ac) ac.openAppSettings().catch(noop);
+  };
+  Native.openNotificationSettings = function () {
+    var ac = plugin('AlarmChannel');
+    if (ac) ac.openNotificationSettings().catch(noop);
+  };
+
+  /* Оятқыш алғаш қосылғанда бір рет түсіндіріп, рұқсат сұраймыз.
+     Бас тартса қайта мазаламаймыз — S.settings.alarmSetup белгісі сақталады. */
+  Native.reliabilitySetup = function (force) {
+    if (!isNative) return Promise.resolve();
+    if (typeof S === 'undefined') return Promise.resolve();
+    /* Бір рет көрсетілген — қайта мазаламаймыз. Бірақ ДӘЛ УАҚЫТ рұқсаты
+       жоқ болса, оятқыш мүлдем сенімсіз болады, сондықтан ол тексеріс
+       бұл шектеуден өтеді (төменде force-қа қарамай қосылады). */
+    var shown = !force && S.settings && S.settings.alarmSetup;
+
+    return Native.checkReliability().then(function (r) {
+      if (!r) return;
+      var steps = [];
+
+      if (!r.exactAllowed && !exactPrompted) {
+        exactPrompted = true;                 // бір сеанста бір рет қана сұраймыз
+        steps.push(function () {
+          if (window.confirm('Оятқыш дәл уақытында соғуы үшін «Оятқыш пен еске '
+              + 'салу» рұқсаты керек. Баптауды ашайын ба?')) {
+            Native.openExactSettings();
+          }
+        });
+      }
+      if (!r.batteryUnrestricted && !shown) {
+        steps.push(function () {
+          if (window.confirm('Оятқыш дұрыс жұмыс істеуі үшін батарея шектеуінен '
+              + 'шығару керек. Онсыз жүйе қосымшаны ұйықтатып, оятқышты '
+              + 'кешіктіруі мүмкін. Рұқсат сұрайын ба?')) {
+            Native.askBattery();
+          }
+        });
+      }
+      var maker = String(r.manufacturer || '').toLowerCase();
+      if (!shown && STRICT.some(function (m) { return maker.indexOf(m) >= 0; })) {
+        steps.push(function () {
+          if (window.confirm('Сенің телефоның (' + r.manufacturer + ') қосымшаларды '
+              + 'қатаң жабады. Оятқыш жұмыс істеуі үшін FitDay-ды «Автозапуск» '
+              + 'тізіміне қосу керек. Қосымша баптауын ашайын ба?')) {
+            Native.openAppSettings();
+          }
+        });
+      }
+
+      if (S.settings) {
+        S.settings.alarmSetup = true;
+        if (typeof saveState === 'function') saveState();
+      }
+      /* Диалогтарды бірінің артынан бірін көрсетеміз */
+      steps.forEach(function (fn, i) { setTimeout(fn, 400 + i * 300); });
+      if (!steps.length) log('сенімділік тексерісі: бәрі дұрыс');
+    });
+  };
+
+  /* =========================================================================
+     6) ҚОЙМАНЫ ТЕКСЕРУ — localStorage мен IndexedDB WebView-де жұмыс істей ме
      ========================================================================= */
   Native.checkStorage = function () {
     var res = { localStorage: 'жоқ', indexedDB: 'жоқ' };
@@ -415,7 +340,7 @@
   };
 
   /* =========================================================================
-     6) Іске қосу — index.html ішіндегі init() соңында шақырылады
+     7) Іске қосу — index.html ішіндегі init() соңында шақырылады
      ========================================================================= */
   Native.init = function () {
     if (!isNative) { log('браузер режимі — нативті қабат өшірулі'); return; }
@@ -423,7 +348,6 @@
 
     initStatusBar();
     initBackButton();
-    initNotificationTap();
 
     Native.checkStorage().then(function (r) {
       log('қойма:', r);
@@ -433,31 +357,30 @@
       }
     });
 
-    Native.prepare().then(function () { return Native.syncAlarm(); });
+    /* Оятқыш соғып тұрып ашылған болуы мүмкін — ең алдымен соны тексереміз */
+    checkPendingRing();
 
-    /* Қосымша алдыңғы қатарға шыққанда: жоспарды жаңартып қоямыз
-       (уақыт өтті, күн ауысты, пайдаланушы баптауды жүйеден өзгертті). */
+    Native.askNotifications()
+      .then(function () { return Native.syncAlarm(); })
+      .then(function () {
+        if (typeof S !== 'undefined' && S.alarm && S.alarm.on) {
+          return Native.reliabilitySetup(false);
+        }
+      });
+
+    /* Қосымша алдыңғы қатарға шыққанда: соғу белгісін және күйді тексереміз */
     var app = plugin('App');
     if (app) {
       app.addListener('appStateChange', function (st) {
-        if (st && st.isActive) { checkExact(); Native.syncAlarm(); }
-      });
-    }
-
-    /* Суық қосылу: қосымша хабарламаны басу арқылы ашылған болуы мүмкін */
-    var ln = plugin('LocalNotifications');
-    if (ln && ln.getDeliveredNotifications) {
-      ln.getDeliveredNotifications().then(function (r) {
-        var list = (r && r.notifications) || [];
-        for (var i = 0; i < list.length; i++) {
-          var ex = list[i].extra;
-          if (ex && ex.fitday === 'alarm') { openRing(ex.stamp); break; }
+        if (st && st.isActive) {
+          checkPendingRing();
+          Native.checkReliability();
         }
-      }).catch(noop);
+      });
+      /* Толық экранды intent-пен ашылғанда resume оқиғасы да келеді */
+      app.addListener('resume', function () { checkPendingRing(); });
     }
 
     setTimeout(hideSplash, 300);
   };
-
-  function noop() { /* қатені елемейміз */ }
 }());

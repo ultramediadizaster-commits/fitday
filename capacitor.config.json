@@ -21,10 +21,6 @@
       "style": "DARK",
       "backgroundColor": "#0A0A0B",
       "overlaysWebView": false
-    },
-    "LocalNotifications": {
-      "smallIcon": "ic_stat_fitday",
-      "iconColor": "#D9F24E"
     }
   }
 }

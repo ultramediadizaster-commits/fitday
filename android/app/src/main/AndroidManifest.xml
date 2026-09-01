@@ -33,6 +33,47 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Оятқыш дабылын қабылдайды. exported=false: тек өз AlarmManager-імізден
+             келеді, сырттан ешкім соқтыра алмайды. -->
+        <receiver
+            android:name=".AlarmReceiver"
+            android:exported="false"
+            android:directBootAware="true" />
+
+        <!-- Телефон қайта қосылғанда оятқышты қалпына келтіреді.
+             AlarmManager-дегі дабылдар өшірген кезде жоғалады, ал баптау
+             SharedPreferences-те тұр. -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Оятқыш қызметі: дыбысты оятқыш ағынында ойнатады және соғар
+             алдында процесті тірі ұстайды.
+             mediaPlayback — соғу кезінде (шынымен дыбыс ойнатылады),
+             specialUse — дайындық кезеңі үшін. -->
+        <service
+            android:name=".AlarmService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="mediaPlayback|specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="alarm" />
+        </service>
     </application>
 
     <!-- Permissions -->
@@ -56,4 +97,17 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Құлыпталған экранда оятқыш бетін ӨЗІ ашу үшін (басудың қажеті болмасын) -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!-- Оятқыш қызметі. Android 14+ түрге сай рұқсатты талап етеді:
+         дыбыс ойнату — MEDIA_PLAYBACK, соғар алдындағы дайындық — SPECIAL_USE. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Doze режимі процесті ұйықтатып, оятқышты кешіктірмеуі үшін.
+         Пайдаланушыдан жүйелік диалог арқылы сұралады. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 </manifest>

@@ -1,8 +1,12 @@
 /* =============================================================================
-   js/native.js — ОЯТҚЫШТЫ ЖОСПАРЛАУ ЛОГИКАСЫНЫҢ ТЕСТІ
+   js/native.js — JS ЖАҒЫНЫҢ ТЕСТІ
 
-   Эмуляторсыз тексереді: Capacitor көпірінің орнына жалған плагиндер қойылады,
-   native.js солармен жүгіріп, қандай хабарламалар жоспарланғанын жазып алады.
+   Жоспарлаудың өзі енді нативте (AlarmManager.setAlarmClock), оны Node тексере
+   алмайды — ол үшін бөлек JUnit тесті бар: android/app/src/test/.../AlarmStoreTest
+   (gradlew testDebugUnitTest).
+
+   Мұнда JS жағы тексеріледі: қосымшаның күйі нативке ДҰРЫС аударыла ма
+   (уақыт, күндер, дауыс), соғу белгісі оқылғанда оятқыш беті ашыла ма.
 
    node tools/test_alarm_schedule.mjs
    ============================================================================= */
@@ -16,141 +20,165 @@ const src = await readFile(join(ROOT, 'js', 'native.js'), 'utf8');
 
 let fails = 0;
 function check(name, cond, extra) {
-  console.log((cond ? '  OK   ' : '  ҚАТЕ ') + name + (cond || extra === undefined ? '' : '  -> ' + extra));
+  console.log((cond ? '  OK   ' : '  ҚАТЕ ') + name +
+    (cond || extra === undefined ? '' : '  -> ' + extra));
   if (!cond) fails++;
 }
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* ---------- Жалған орта ---------- */
-function makeEnv(alarm, now) {
-  const calls = { scheduled: [], cancelled: [], channels: [], listeners: {} };
+function makeEnv(alarm, opts = {}) {
+  const calls = { setAlarm: [], stopRinging: 0, listeners: {}, confirms: [], opened: [] };
+  const ring = {
+    id: 'ov-ring', shown: false,
+    classList: {
+      contains: (c) => c === 'show' && ring.shown,
+      add(c) { if (c === 'show') ring.shown = true; },
+      remove(c) { if (c === 'show') ring.shown = false; },
+    },
+  };
 
-  const LocalNotifications = {
-    checkPermissions: async () => ({ display: 'granted' }),
-    requestPermissions: async () => ({ display: 'granted' }),
-    getPending: async () => ({ notifications: [] }),
-    cancel: async (o) => { calls.cancelled.push(o); },
-    schedule: async (o) => { calls.scheduled.push(o); },
-    getDeliveredNotifications: async () => ({ notifications: [] }),
-    addListener: (n, f) => { calls.listeners[n] = f; },
-  };
   const AlarmChannel = {
-    create: async (o) => { calls.channels.push(o); return { created: o.voices.length }; },
-    canScheduleExact: async () => ({ granted: true }),
+    checkPermissions: async () => ({ notifications: 'granted' }),
+    requestPermissions: async () => ({ notifications: 'granted' }),
+    setAlarm: async (o) => {
+      calls.setAlarm.push(o);
+      return { scheduled: !!o.enabled, nextTrigger: 1, nextLabel: '2026-09-02 07:00' };
+    },
+    cancelAlarm: async () => {},
+    stopRinging: async () => { calls.stopRinging++; },
+    consumePendingRing: async () => opts.pending
+      ? { pending: true, stamp: opts.pending, ringing: true }
+      : { pending: false, stamp: '', ringing: false },
+    status: async () => ({
+      enabled: !!alarm.on,
+      nextLabel: '2026-09-02 07:00',
+      exactAllowed: opts.exactAllowed !== false,
+      batteryUnrestricted: opts.battery !== false,
+      manufacturer: opts.manufacturer || 'Google',
+    }),
+    openExactAlarmSettings: async () => { calls.opened.push('exact'); },
+    requestBatteryUnrestricted: async () => { calls.opened.push('battery'); },
+    openAppSettings: async () => { calls.opened.push('app'); },
   };
-  const el = () => ({ classList: { contains: () => false, remove() {}, add() {} } });
+
   const sandbox = {
-    console,
+    console: { log() {}, error() {} },
     setTimeout, clearTimeout, Promise, Date, Math, String, Number, JSON, Array, Object,
-    S: { alarm },
+    S: { alarm, settings: {} },
     toast: () => {},
-    document: { getElementById: el, querySelector: () => null, addEventListener() {} },
+    saveState: () => {},
+    fireAlarm: () => { ring.shown = true; calls.fired = true; },
+    Sound: { ready: () => true },
+    document: {
+      getElementById: (id) => (id === 'ov-ring' ? ring : null),
+      querySelector: () => null,
+      addEventListener() {},
+    },
   };
   sandbox.window = sandbox;
+  sandbox.window.confirm = (msg) => { calls.confirms.push(msg); return false; };
   sandbox.window.Capacitor = {
     isNativePlatform: () => true,
     getPlatform: () => 'android',
-    Plugins: { LocalNotifications, AlarmChannel, StatusBar: null, App: null, SplashScreen: null },
-  };
-  /* Уақытты бекітеміз — тест күнге тәуелді болмауы керек */
-  const RealDate = Date;
-  sandbox.Date = class extends RealDate {
-    constructor(...a) { super(...(a.length ? a : [now])); }
-    static now() { return now; }
+    Plugins: { AlarmChannel, StatusBar: null, App: null, SplashScreen: null, KeepAwake: null },
   };
   const ctx = createContext(sandbox);
   runInContext(src, ctx, { filename: 'js/native.js' });
-  return { ctx, calls, Native: sandbox.Native };
+  return { calls, ring, Native: sandbox.Native, S: sandbox.S };
 }
 
-/* ---------- 1) Дүйсенбі–жұма, 07:00 ---------- */
+/* ---------- 1) Күй нативке дұрыс аударыла ма ---------- */
 console.log('\n1) Дүйсенбі–жұма 07:00, дауыс = classic');
 {
-  const now = new RealDateSafe('2026-09-01T10:00:00').getTime();   // сейсенбі, түстен кейін
   const { calls, Native } = makeEnv(
-    { time: '07:00', days: [1, 2, 3, 4, 5], on: true, math: true, sound: 'classic' }, now);
-
-  await Native.prepare();
+    { time: '07:00', days: [1, 2, 3, 4, 5], on: true, math: true, sound: 'classic', vibro: true });
   await Native.syncAlarm();
-  await new Promise((r) => setTimeout(r, 600));       // syncAlarm ішіндегі кідіріс
+  await wait(600);
 
-  const batch = calls.scheduled[0];
-  const n = batch ? batch.notifications : [];
-  check('хабарлама жоспарланды', n.length === 60, n.length);
-  check('арналар жасалды (5 дауыс)',
-    calls.channels.length === 1 && calls.channels[0].voices.length === 5);
-  check('діріл ырғағы берілді', Array.isArray(calls.channels[0].vibration));
-
-  const first = n[0];
-  check('allowWhileIdle қосулы', first.schedule.allowWhileIdle === true);
-  check('арна = fitday_alarm_classic_v1', first.channelId === 'fitday_alarm_classic_v1',
-    first.channelId);
-  check('дыбыс файлы', first.sound === 'alarm_classic.mp3', first.sound);
-  check('шағын белгі', first.smallIcon === 'ic_stat_fitday');
-  check('extra.fitday = alarm', first.extra && first.extra.fitday === 'alarm');
-
-  const t0 = new RealDateSafe(first.schedule.at).getTime();
-  const when = new RealDateSafe(t0);
-  check('алғашқы ояту 07:00-де',
-    when.getHours() === 7 && when.getMinutes() === 0, when.toString());
-  check('алғашқы ояту болашақта', t0 > now);
-  check('алғашқы ояту — 2 қыркүйек (сәрсенбі)', when.getDate() === 2, when.getDate());
-
-  /* Тізбек: 30 секунд сайын */
-  const t1 = new RealDateSafe(n[1].schedule.at).getTime();
-  check('тізбек қадамы 30 сек', t1 - t0 === 30000, (t1 - t0) / 1000 + ' сек');
-
-  /* id диапазоны бірегей */
-  const ids = new Set(n.map((x) => x.id));
-  check('id-лер бірегей', ids.size === n.length);
-  check('id диапазонда (41000+)', Math.min(...ids) >= 41000 && Math.max(...ids) < 41060);
-
-  /* Демалыс күндері жоқ */
-  const weekend = n.filter((x) => {
-    const d = new RealDateSafe(x.schedule.at).getDay();
-    return d === 0 || d === 6;
-  });
-  check('сенбі-жексенбіге жоспарланбаған', weekend.length === 0, weekend.length);
+  const p = calls.setAlarm[0];
+  check('setAlarm шақырылды', !!p);
+  check('enabled = true', p.enabled === true);
+  check('сағат = 7', p.hour === 7, p.hour);
+  check('минут = 0', p.minute === 0, p.minute);
+  check('күндер = "1,2,3,4,5"', p.days === '1,2,3,4,5', p.days);
+  check('дауыс = classic', p.voice === 'classic', p.voice);
+  check('math = true', p.math === true);
+  check('vibro = true', p.vibro === true);
+  check('келесі соғу белгісі оқылды', Native.nextLabel === '2026-09-02 07:00', Native.nextLabel);
 }
 
-/* ---------- 2) Оятқыш өшірулі ---------- */
-console.log('\n2) Оятқыш өшірулі');
+/* ---------- 2) Уақыттың нөлі мен түн ортасы ---------- */
+console.log('\n2) 00:05, тек жексенбі');
 {
-  const now = new RealDateSafe('2026-09-01T10:00:00').getTime();
   const { calls, Native } = makeEnv(
-    { time: '07:00', days: [1, 2, 3, 4, 5], on: false, math: true, sound: 'classic' }, now);
-  await Native.prepare();
+    { time: '00:05', days: [0], on: true, math: false, sound: 'random', vibro: false });
   await Native.syncAlarm();
-  await new Promise((r) => setTimeout(r, 600));
-  check('ештеңе жоспарланбады', calls.scheduled.length === 0, calls.scheduled.length);
+  await wait(600);
+  const p = calls.setAlarm[0];
+  check('сағат = 0', p.hour === 0, p.hour);
+  check('минут = 5', p.minute === 5, p.minute);
+  check('күндер = "0"', p.days === '0', p.days);
+  check('дауыс = random (нативте шешіледі)', p.voice === 'random', p.voice);
+  check('math = false', p.math === false);
+  check('vibro = false', p.vibro === false);
 }
 
-/* ---------- 3) «Кездейсоқ» дауыс — күнге қарай арна ---------- */
-console.log('\n3) Дауыс = random');
+/* ---------- 3) Оятқыш өшірулі ---------- */
+console.log('\n3) Оятқыш өшірулі');
 {
-  const now = new RealDateSafe('2026-09-01T10:00:00').getTime();
   const { calls, Native } = makeEnv(
-    { time: '06:30', days: [0, 1, 2, 3, 4, 5, 6], on: true, math: false, sound: 'random' }, now);
-  await Native.prepare();
+    { time: '07:00', days: [1, 2, 3], on: false, math: true, sound: 'classic', vibro: true });
   await Native.syncAlarm();
-  await new Promise((r) => setTimeout(r, 600));
+  await wait(600);
+  check('setAlarm бәрібір шақырылады (нативте өшіріледі)', calls.setAlarm.length === 1);
+  check('enabled = false', calls.setAlarm[0].enabled === false);
+}
 
-  const n = calls.scheduled[0].notifications;
-  const pool = ['classic', 'siren', 'industrial', 'drip'];
-  const chans = [...new Set(n.map((x) => x.channelId))];
-  check('барлық арна пулдан алынған',
-    chans.every((c) => pool.some((v) => c === 'fitday_alarm_' + v + '_v1')), chans.join(','));
-  check('әр күнге бір арна (тізбек ішінде бірдей)',
-    n[0].channelId === n[1].channelId && n[0].channelId === n[5].channelId);
-  check('дыбыс арнаға сай',
-    n[0].sound === n[0].channelId.replace('fitday_', '').replace('_v1', '') + '.mp3',
-    n[0].sound + ' vs ' + n[0].channelId);
+/* ---------- 4) Соғу белгісі: бет ашылады ---------- */
+console.log('\n4) Нативте оятқыш соққан — бет ашылуы керек');
+{
+  const { calls, ring, Native, S } = makeEnv(
+    { time: '07:00', days: [1], on: true, math: true, sound: 'classic', vibro: true },
+    { pending: '2026-09-02 07:00' });
+  Native.init();
+  await wait(700);
+  check('оятқыш беті ашылды', ring.shown === true);
+  check('fireAlarm шақырылды', calls.fired === true);
+  check('lastFire жазылды', S.alarm.lastFire === '2026-09-02 07:00', S.alarm.lastFire);
+}
 
-  const w = new RealDateSafe(n[0].schedule.at);
-  check('уақыт 06:30', w.getHours() === 6 && w.getMinutes() === 30, w.toString());
+/* ---------- 5) Өшіргенде дыбыс тоқтайды ---------- */
+console.log('\n5) stopRinging');
+{
+  const { calls, Native } = makeEnv(
+    { time: '07:00', days: [1], on: true, math: true, sound: 'classic', vibro: true });
+  await Native.stopRinging();
+  check('нативке stopRinging жіберілді', calls.stopRinging === 1, calls.stopRinging);
+}
+
+/* ---------- 6) Сенімділік тексерісі ---------- */
+console.log('\n6) Рұқсаттар мен өндіруші');
+{
+  const { calls, Native } = makeEnv(
+    { time: '07:00', days: [1], on: true, math: true, sound: 'classic', vibro: true },
+    { exactAllowed: false, battery: false, manufacturer: 'Xiaomi' });
+  await Native.reliabilitySetup(true);
+  await wait(1200);
+  const all = calls.confirms.join(' | ');
+  check('дәл уақыт рұқсаты сұралды', /Оятқыш пен еске/.test(all), all.slice(0, 60));
+  check('батарея шектеуі айтылды', /батарея шектеуінен/.test(all));
+  check('Xiaomi автозапуск ескертілді', /Автозапуск/.test(all));
+}
+console.log('\n7) Бәрі дұрыс болса — ескерту жоқ');
+{
+  const { calls, Native } = makeEnv(
+    { time: '07:00', days: [1], on: true, math: true, sound: 'classic', vibro: true },
+    { exactAllowed: true, battery: true, manufacturer: 'Google' });
+  await Native.reliabilitySetup(true);
+  await wait(800);
+  check('бір де бір диалог көрсетілмеді', calls.confirms.length === 0, calls.confirms.length);
 }
 
 console.log(fails ? '\n' + fails + ' ТЕКСЕРУ ҚҰЛАДЫ' : '\nБарлық тексеру өтті.');
 process.exit(fails ? 1 : 0);
-
-/* Sandbox ішіндегі Date-пен шатаспас үшін нақты Date-тің қауіпсіз атауы */
-function RealDateSafe(v) { return v === undefined ? new Date() : new Date(v); }
