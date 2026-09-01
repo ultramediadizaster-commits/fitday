@@ -3,3 +3,4 @@
 # Спрайтты қайта жинау үшін tools/cut_audio.py + tools/build_sprite.py қолдан.
 audio/raw/
 audio/parts/
+audio/raw-*.mp3
