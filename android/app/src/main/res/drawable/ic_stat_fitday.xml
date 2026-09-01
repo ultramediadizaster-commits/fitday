@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Хабарламаның шағын белгісі. Android оны СИЛУЭТ ретінде салады:
+     тек альфа-арна қолданылады, түсі iconColor-дан алынады.
+     Сондықтан фигура ақ, фоны мөлдір болуы керек. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path
+        android:pathData="M256,106 a150,150 0 1,0 0.1,0 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="34"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M186,300 L246,196 L286,250 L326,190"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="34"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+</vector>

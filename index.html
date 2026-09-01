@@ -1200,6 +1200,12 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(0.6)}
 
 <div id="toast"></div>
 
+<!-- Нативті қабат (Capacitor). Браузерде window.Capacitor болмайды да,
+     бұл файл ештеңе істемейді — PWA нұсқасы бұрынғыдай жұмыс істейді.
+     Негізгі скриптен БҰРЫН жүктеледі: ол window.Native-ті ғана жариялайды,
+     ал іске қосу init() соңында болады. -->
+<script src="js/native.js"></script>
+
 <script>
 'use strict';
 /* =========================================================================
@@ -1366,6 +1372,9 @@ function migrateV1(out, saved) {
 function saveState() {
   try {
     localStorage.setItem(CFG.STORE_KEY, JSON.stringify(S));
+    /* Оятқыш баптауы өзгерген болуы мүмкін — жүйелік хабарламаларды
+       қайта жоспарлаймыз (ішінде кідіріс бар, жиі шақырудан қорықпаймыз). */
+    if (window.Native && Native.active) Native.syncAlarm();
     return true;
   } catch (e) {
     const full = e && (e.name === 'QuotaExceededError' || e.code === 22);
@@ -3647,6 +3656,9 @@ function checkMath() {
 }
 function dismissAlarm() {
   Sound.stopAlarm();
+  /* Нативте оятқыш — хабарламалар тізбегі. Қалғанын тоқтатпасақ,
+     тағы 30 секунд сайын шырылдай береді. */
+  if (window.Native && Native.active) Native.stopRinging();
   $('#ov-ring').classList.remove('show');
   markAlarmDone();
   nav('alarm');
@@ -4812,6 +4824,9 @@ function init() {
   if (CFG.TABS.indexOf(hash) >= 0) nav(hash);
   setTimeout(hideSkeleton, CFG.SKELETON_MS);
   if (!S.onboarded) setTimeout(startOnboarding, CFG.SKELETON_MS + 100);
+  /* Нативті қабат (Capacitor): күй жолағы, splash, артқы түйме және ең
+     бастысы — оятқыштың жүйелік хабарламалары. Браузерде түк істемейді. */
+  if (window.Native) Native.init();
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>

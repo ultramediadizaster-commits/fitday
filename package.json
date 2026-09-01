@@ -8,7 +8,8 @@
     "build": "node tools/build_www.mjs",
     "sync": "npm run build && npx cap sync",
     "android": "npm run sync && npx cap open android",
-    "sounds": "node tools/render_alarm_sounds.mjs && node tools/encode_alarm_sounds.mjs"
+    "sounds": "node tools/render_alarm_sounds.mjs && node tools/encode_alarm_sounds.mjs",
+    "test": "node tools/test_alarm_schedule.mjs"
   },
   "license": "UNLICENSED",
   "dependencies": {

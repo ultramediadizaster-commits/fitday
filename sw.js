@@ -1,5 +1,5 @@
 /* FitDay service worker — офлайн жұмыс үшін кэш */
-const CACHE = 'fitday-v9';   // мобиль autoplay түзетуі + дыбыс диагностикасы
+const CACHE = 'fitday-v10';   // нативті қабат (Capacitor) қосылды
 
 /* Қосымшаның қаңқасы (app shell) */
 const ASSETS = [
@@ -10,6 +10,7 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png',
   './icon-maskable.png',
+  './js/native.js',
   './js/three.min.js',
   './js/GLTFLoader.js',
   './models/athlete.glb',
